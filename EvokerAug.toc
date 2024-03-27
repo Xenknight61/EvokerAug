@@ -1,0 +1,17 @@
+## Interface: 100206
+## Version: 1.0.0
+## Title: EvokerAug
+## Notes: Evoker Aug is a simple addon that adds a small frame to the screen that shows the current number of evokers in the zone. It also has a small button that can be clicked to show a list of all the evokers in the zone.
+## Author: xenknight
+## X-Category: Evoker
+## SavedVariables: EvokerAugDB
+## OptionalDeps: ibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0
+## IconTexture: Interface\AddOns\EvokerAug\Config\Media\bar
+
+# External code + initialization
+embeds.xml
+
+# Core Files
+Core\Config.lua
+Core\EvokerAug.lua
+Core\SpellList.lua
