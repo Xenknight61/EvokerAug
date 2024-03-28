@@ -36,6 +36,48 @@ local sortTypes = {
     ["ROLE"] = sortFramesByRole,
 }
 
+-- Minimap Icon
+
+local function HideAllSubFrames()
+    if selectedPlayerFrameContainer:IsShown() then
+        selectedPlayerFrameContainer:Hide()
+    else
+        selectedPlayerFrameContainer:Show()
+    end
+    for k, v in ipairs(selectedPlayerFrames) do
+        if v:IsShown() then
+            v:Hide()
+        else
+            v:Show()
+        end
+    end
+end
+
+local function createMiniMapIcon()
+    local miniButton = LibStub("LibDataBroker-1.1"):NewDataObject(addonName,
+        {
+            type = "launcher",
+            text = addonName,
+            icon = "Interface\\AddOns\\EvokerAug\\Media\\augevoker-logo",
+            OnClick = function(self, btn)
+                if btn == "LeftButton" then
+                    addon:OpenOptions()
+                elseif btn == "RightButton" then
+                    HideAllSubFrames()
+                end
+            end,
+            OnTooltipShow = function(tooltip)
+                if not tooltip or not tooltip.AddLine then return end
+                tooltip:AddLine(addonName)
+                tooltip:AddLine(" ")
+                tooltip:AddLine("|cffeda55fLeft Click|r to open settings.", 0.2, 1, 0.2)
+                tooltip:AddLine("|cffeda55fRight Click|r to show/hide frame.", 0.2, 1, 0.2)
+            end,
+    })
+    local icon = LibStub("LibDBIcon-1.0", true)
+    icon:Register(addonName, miniButton, addon.db.profile.minimap)
+end
+
 
 ---- Player Buffs Icon -----
 local function GetCharacterName(fullName)
@@ -48,18 +90,13 @@ local function GetCharacterName(fullName)
 end
 
 local function RepositionBuffIcons(playerFrame)
-
     playerFrame["buff"].xOffset = 0
-
-    -- İkonları yerleştir
     for k, icon in pairs(playerFrame["buff"]) do
         if type(icon) == "table" and not string.match(k, "Text$") then
             icon:SetPoint("LEFT", playerFrame, "RIGHT", playerFrame["buff"].xOffset, 0)
             playerFrame["buff"].xOffset = playerFrame["buff"].xOffset + 20
         end
     end
-
-
 end
 
 local function RemoveBuffIcon(playerFrame, buffID)
@@ -202,7 +239,7 @@ end
 local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitIndex)
     local frameIndex = #selectedPlayerFrames + 1
     selectedPlayerFrames[frameIndex] = CreateFrame("Button", selectedPlayerFrameContainer, UIParent, BackdropTemplateMixin and "BackdropTemplate, SecureUnitButtonTemplate")
-    selectedPlayerFrames[frameIndex]:SetSize(150, addon.db.profile.buttonHeight)-- Boyutu ayarla
+    selectedPlayerFrames[frameIndex]:SetSize(150, addon.db.profile.buttonHeight)
     selectedPlayerFrames[frameIndex]["buff"] = {}
     selectedPlayerFrames[frameIndex]["buff"].xOffset = 0
     selectedPlayerFrames[frameIndex].playerName = playerName
@@ -397,7 +434,7 @@ local function GetOptions()
                         name = "\n\n\n", order = 1, type = "description",
                     },
                     version = {
-                        name = "|cffffff00 Version |r |cff00ff00 1.0.0 |r",
+                        name = "|cffffff00 Version |r |cff00ff00 " .. addon.Config["version"] .. "|r",
                         order = 2,
                         type = "description",
                     },
@@ -568,6 +605,19 @@ local function GetOptions()
                         end,
                         set = function(info, value)
                             addon.db.profile.headerunlock = value
+                        end,
+                    },
+                    frameHide = {
+                        order = 21,
+                        type = 'toggle',
+                        name = "Hide Frame",
+                        desc = " ",
+                        width = 1,
+                        get = function() return
+                            selectedPlayerFrameContainer:IsShown()
+                        end,
+                        set = function(info, value)
+                            HideAllSubFrames()
                         end,
                     },
                     h2 = {
@@ -834,6 +884,7 @@ function addon:OnInitialize()
 	self:RegisterChatCommand("aug", function(cmd)
 		addon:OpenOptions(strsplit(' ', cmd or ""))
 	end, true)
+    createMiniMapIcon()
 end
 
 function addon:OnEnable()-- PLAYER_LOGIN
@@ -948,12 +999,12 @@ function GetHomePartyInfo()
                 unit = "player"
                 fullName, class =  UnitName(unit), UnitClass(unit)
             end
-
+            --local combatRole = UnitGroupRolesAssigned(unit)
             local _, _, _, _, combatRole = GetSpecializationInfo(GetSpecialization(unit) or 0)
             if not combatRole then
-                combatRole = "NONE"
+                combatRole = UnitGroupRolesAssigned(unit)
             end
-            local name = GetCharacterName(fullName)-- Tam adı karakter adına ayır
+            local name = GetCharacterName(fullName)
 
             if name and class and combatRole then
                 table.insert(partyMembers, {name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole})-- Sınıfı da tabloya ekliyoruz

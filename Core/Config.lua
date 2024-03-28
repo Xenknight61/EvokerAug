@@ -11,6 +11,9 @@ addon.DefaultProfile = {
             xOffset = 0,
             yOffset = 0
         },
+        minimap = {
+            hide = false
+        },
         buttonHeight = 25,
         spellIconSize = 25,
         backgroundTextTexture = "Interface\\Addons\\EvokerAug\\Media\\bar",
@@ -40,9 +43,13 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.0",
+    ["version"] = "1.0.1",
     ["changelog"] = [=[
-        v1.0.0
-        - Initial release
-    ]=]
+v1.0.1
+    - Added icon to map section
+    - Frame hiding function added
+
+v1.0.0
+    - Initial release
+]=]
 }
