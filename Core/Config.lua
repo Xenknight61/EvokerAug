@@ -46,6 +46,7 @@ addon.DefaultProfile = {
 addon.Config = {
     ["version"] = "1.0.2",
     ["changelog"] = [=[
+
 v1.0.2
     - Fixed an issue that caused the icon to be deleted even though it was
         Buff
@@ -59,5 +60,6 @@ v1.0.1
 
 v1.0.0
     - Initial release
+
 ]=]
 }
