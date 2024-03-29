@@ -2,8 +2,6 @@ name: Packager
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
     paths-ignore:
