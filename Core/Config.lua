@@ -22,9 +22,12 @@ addon.DefaultProfile = {
         sortByClass = false,
         sortType = "NAME",
         charSpell = {},
+
         macroAltClick = true,
         macroShiftClick = true,
         macroCtrlClick = true,
+        macroRightClick = true,
+
         tankSpellLeftClick = 360827,
         ShiftankSpellLeftClick = 395152,
         CtrlTankSpellLeftClick = 361469,
@@ -33,6 +36,8 @@ addon.DefaultProfile = {
         ShifdpsSpellLeftClick = 395152,
         CtrlDpsSpellLeftClick = 355913,
         AltDpsSpellLeftClick = 361227,
+        tankSpellRightClick = 360995,
+        dpsSpellRightClick = 360995,
         buffList = {
             [410089] = "Prescience",
             [360827] = "Blistering Scales",
@@ -44,8 +49,12 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.2",
+    ["version"] = "1.0.3",
     ["changelog"] = [=[
+
+v1.0.3
+    - Fixed the issue of making yourself appear transparent
+    - Added right click feature to macros
 
 v1.0.2
     - Fixed an issue that caused the icon to be deleted even though it was
