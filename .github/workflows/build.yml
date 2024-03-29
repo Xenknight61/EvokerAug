@@ -1,12 +1,9 @@
 name: Packager
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
     tags:
-      - '*'
+      - '**'
 
 jobs:
   packager:
@@ -34,8 +31,10 @@ jobs:
           name: EvokerAug
           path: .release/*.zip
 
-      - name: Send a message to Discord if meets a failure
-        uses: nebularg/actions-discord-webhook@v1
+
+      - name: Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.WEBHOOK_URL }}
+        uses: Ilshidur/action-discord@master
         with:
-          webhook_url: ${{ secrets.WEBHOOK_URL }}
-        if: failure()
+          args: 'EvokerAug'
