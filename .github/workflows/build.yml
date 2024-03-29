@@ -15,9 +15,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Step 1 - Echo out a GitHub Actions Secret to the logs
+      - name: Set env as secret
+        env:
+          MY_VAL: ${{ secrets.CF_API_KEY }}
         run: |
-            echo "The GitHub Action Secret will be masked:  "
-            echo ${{ secrets.CF_API_KEY }}
-            echo "Trick to echo GitHub Actions Secret:  "
-            echo ${{secrets.CF_API_KEY}} | sed 's/./& /g'
+          import os
+          for q in (os.getenv("MY_VAL")):
+            print(q)
+        shell: python
