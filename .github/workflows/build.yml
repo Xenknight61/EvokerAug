@@ -19,7 +19,7 @@ jobs:
       WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}
       WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
       GITHUB_OAUTH: ${{ secrets.EVOKER_TOKEN }}
-      DISCORD_WEBHOOK: ${{ secrets.WEBHOOK_URL }}
+      DISCORD_WEBHOOK: ${{ env.WEBHOOK_URL }}
   
     steps:
       - name: Print secrets
