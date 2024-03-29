@@ -13,3 +13,11 @@ Once installed, type /aug in-game to access the addon's settings panel. Alternat
 Contributing to Development: 
 
 Evoker Aug is an open-source project hosted on GitHub. You can contribute to its development by submitting bug reports, feature requests, or code contributions.
+
+FeedBack
+
+We are always interested in hearing from you:
+
+Report issues on GitHub
+
+Contact us on [Discord](https://discord.gg/jKGdPTrXQF)
