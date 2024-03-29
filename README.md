@@ -9,6 +9,7 @@ Installation and Usage:
 
 Once installed, type /aug in-game to access the addon's settings panel. Alternatively, click on the EvokerAug frame on your screen to access the settings panel. Right-clicking on the frame allows you to select which party members you want to display in the frame. Once selected, click on the party member's frame to use buffs with the keybindings you've set in the settings panel.
 
+
  
 Contributing to Development: 
 
