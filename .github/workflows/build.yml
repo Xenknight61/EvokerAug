@@ -1,44 +1,36 @@
 name: Packager
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
     branches:
       - main
     tags:
-      - '**'
+      - '*'
+    paths-ignore:
+      - '.github/**'
 
 jobs:
   packager:
     runs-on: ubuntu-latest
-
-    env:
-      CF_API_KEY: ${{ secrets.CF_API_KEY }}
-      WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}
-      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
-      GITHUB_OAUTH: ${{ secrets.EVOKER_TOKEN }}
-      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBOOK }}
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: BigWigsMods/packager@master
+      - name: Run luacheck
+        uses: BigWigsMods/actions/luacheck@master
         with:
-          args: -p 993748 -w 26709 -a L6JDoxGv
+          args: -q
+          
+      - name: Update option files
+        if: always()
+        run: EvokerAug.toc
 
-
-      - name: Upload to Github Actions
-        uses: actions/upload-artifact@v4
-        with:
-          name: EvokerAug
-          path: .release/*.zip
-
-
-      - name: Discord notification          
-        uses: Ilshidur/action-discord@master
-        with:
-          args: 'EvokerAug'
+      - name: Package 
+        uses: BigWigsMods/packager@master
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}
+          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+          GITHUB_OAUTH: ${{ secrets.EVOKER_TOKEN }}
