@@ -1,6 +1,5 @@
 name: Release AddOn
 
-#on: [push]
 on:
   push:
     branches:
