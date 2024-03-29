@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Set env as secret
         env:
-          MY_VAL: ${{ secrets.CF_API_KEY }}
+          MY_VAL: ${{ secrets.DISCORD_WEBOOK }}
         run: |
           import os
           for q in (os.getenv("MY_VAL")):
