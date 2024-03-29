@@ -37,14 +37,21 @@ addon.DefaultProfile = {
             [410089] = "Prescience",
             [360827] = "Blistering Scales",
             [395296] = "Ebon Might",
+            [395152] = "Ebon Might",
             [369459] = "Source of Magic",
         }
     }
 }
 
 addon.Config = {
-    ["version"] = "1.0.1",
+    ["version"] = "1.0.2",
     ["changelog"] = [=[
+v1.0.2
+    - Fixed an issue that caused the icon to be deleted even though it was
+        Buff
+    - Range function has been added. If the player is not in range,
+        it will appear transparent.
+    - Fixed the Ebon Might icon not showing up.
 v1.0.1
     - Added icon to map section
     - Frame hiding function added

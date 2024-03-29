@@ -18,16 +18,17 @@ spell_list = {
 
 AllSpellList = {
     ["Augmentation"] = {
-        ["Obsidian Scales"] = 363916,
-        ["Sourceof Magic"] = 369459,
-        ["Ebon Might"] = 395296,
-        ["Prescience"] = 410089,
-        ["Zephyr"] = 374227,
-        ["Blessing of the Bronze"] = 381748,
-        ["Blistering Scales"] = 360827,
-        ["Spatial Paradox"] = 406732,
-        ["Renewing Blaze"] = 374348,
-        ["Breath of Eons"] = 403631,
-        ["Tip the Scales"] = 370553
+        [363916] = "Obsidian Scales",
+        [369459] = "Sourceof Magic",
+        [395296] = "Ebon Might",
+        [395152] = "Ebon Might",
+        [410089] = "Prescience",
+        [374227] = "Zephyr",
+        [381748] = "Blessing of the Bronze",
+        [360827] = "Blistering Scales",
+        [406732] = "Spatial Paradox",
+        [374348] = "Renewing Blaze",
+        [403631] = "Breath of Eons",
+        [370553] = "Tip the Scales"
     },
 }

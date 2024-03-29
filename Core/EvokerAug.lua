@@ -8,6 +8,7 @@ local EvokerAugOptions = {}
 local checkboxStates = {}
 local selectedPlayerFrames = {}
 local selectedPlayerFrameContainer
+local distanceTimer
 
 
 local function sortFramesByName(a, b)
@@ -102,12 +103,10 @@ end
 local function RemoveBuffIcon(playerFrame, buffID)
     if playerFrame and buffID then
         if playerFrame["buff"][buffID] then
-
             playerFrame["buff"][buffID.."Text"].ticker:Cancel()
             playerFrame["buff"][buffID.."Text"]:Hide()
             playerFrame["buff"][buffID.."Text"]:ClearAllPoints()
             playerFrame["buff"][buffID.."Text"] = nil
-
 
             playerFrame["buff"][buffID]:Hide()
             playerFrame["buff"][buffID]:ClearAllPoints()
@@ -126,6 +125,7 @@ local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon)
     if playerFrame["buff"][auraInstanceID] then
         if playerFrame["buff"][auraInstanceID.."Text"] then
             playerFrame["buff"][auraInstanceID.."Text"].timestamp = timestamp
+
         end
         return
     end
@@ -161,17 +161,17 @@ local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon)
     end)
     playerFrame["buff"].xOffset = playerFrame["buff"].xOffset + 20
 
-    if timestamp then
-        local remainingTime = timestamp - GetTime()
-        C_Timer.After(remainingTime, function()
-            if playerFrame["buff"][auraInstanceID] == nil then
-                return
-            end
-            playerFrame["buff"][auraInstanceID.."Text"].ticker:Cancel()
+    -- if timestamp then
+    --     local remainingTime = timestamp - GetTime()
+    --     C_Timer.After(remainingTime, function()
+    --         if playerFrame["buff"][auraInstanceID] == nil then
+    --             return
+    --         end
+    --         playerFrame["buff"][auraInstanceID.."Text"].ticker:Cancel()
 
-            RemoveBuffIcon(playerFrame, auraInstanceID)
-        end)
-    end
+    --         RemoveBuffIcon(playerFrame, auraInstanceID)
+    --     end)
+    -- end
 end
 
 local function AddBuffIcons(playerFrame, playerName)
@@ -192,6 +192,27 @@ end
 
 
 --- Create Player Frame ----
+
+local function CheckDistance(playerFrame)
+    local unit = playerFrame.unit
+    if UnitExists(unit) then
+        local inRange = UnitInRange(unit)
+
+        if inRange then
+            playerFrame:SetAlpha(0.9);
+        else
+            playerFrame:SetAlpha(0.3);
+        end
+    end
+end
+
+
+local function UpdateDistance()
+    for _, playerFrame in ipairs(selectedPlayerFrames) do
+        CheckDistance(playerFrame)
+    end
+end
+
 local function MacroUpdate(frame)
     if frame.role == "TANK" then
         frame:SetAttribute("spell", addon.db.profile.charSpell[addon.db.profile.tankSpellLeftClick]);
@@ -291,19 +312,24 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
 
     MacroUpdate(selectedPlayerFrames[frameIndex])
 
-    local classColor = RAID_CLASS_COLORS[class] or {r = 0.5, g = 0.5, b = 0.5}
+
     selectedPlayerFrames[frameIndex]:SetBackdrop({
         bgFile = [=[Interface\Tooltips\UI-Tooltip-Background]=],
         insets = {top = -1, left = -1, bottom = -1, right = -1}
     })
+    local classColor = RAID_CLASS_COLORS[class] or {r = 0.5, g = 0.5, b = 0.5}
     selectedPlayerFrames[frameIndex]:SetBackdropColor(classColor.r, classColor.g, classColor.b, 0.9)
+    selectedPlayerFrames[frameIndex].texture:SetVertexColor(classColor.r, classColor.g, classColor.b, 0.9)
+    CheckDistance(selectedPlayerFrames[frameIndex])
+
+
 
     selectedPlayerFrames[frameIndex].texture:SetPoint('TOP', selectedPlayerFrames[frameIndex], 'TOP')
     selectedPlayerFrames[frameIndex].texture:SetPoint('BOTTOM', selectedPlayerFrames[frameIndex], 'BOTTOM')
     selectedPlayerFrames[frameIndex].texture:SetPoint('LEFT', selectedPlayerFrames[frameIndex], 'LEFT')
     selectedPlayerFrames[frameIndex].texture:SetSize(150, 20)
     selectedPlayerFrames[frameIndex].texture:SetTexture(addon.db.profile.backgroundTextTexture)
-    selectedPlayerFrames[frameIndex].texture:SetVertexColor(classColor.r, classColor.g, classColor.b, 0.9)
+
 
     -- Oyuncu adını gösteren bir metin oluştur
     local playerNameText = selectedPlayerFrames[frameIndex]:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -328,6 +354,9 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
         end
     end
 
+    if distanceTimer == nil then
+        distanceTimer = C_Timer.NewTicker(1, UpdateDistance)
+    end
 end
 
 local function DeleteSelectedPlayerFrame(playerName)
@@ -358,6 +387,13 @@ local function DeleteSelectedPlayerFrame(playerName)
             else
                 frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0, (i - tankCount) * -addon.db.profile.buttonHeight)
             end
+        end
+    end
+
+    if #selectedPlayerFrames == 0 then
+        if distanceTimer then
+            distanceTimer:Cancel()
+            distanceTimer = nil
         end
     end
 end
@@ -400,8 +436,8 @@ end
 local function GetClasses()
     local Augment = {}
     for k, v in pairs(AllSpellList["Augmentation"]) do
-        local spellName, _, icon = GetSpellInfo(v)
-        Augment[v] = {icon = icon, name = spellName}
+        local spellName, _, icon = GetSpellInfo(k)
+        Augment[k] = {icon = icon, name = spellName}
     end
 
     return Augment
@@ -622,7 +658,7 @@ local function GetOptions()
                     },
                     h2 = {
                         type = 'header',
-                        name = 'Makrolar',
+                        name = 'Macros',
                         order = 40,
                     },
                     allowModifierAlt = {
@@ -853,7 +889,7 @@ local function GetOptions()
     }
 
     for k, v in pairs(GetClasses()) do
-        EvokerAugOptions.args.customSpells.args.buffList.args[v.name] = {
+        EvokerAugOptions.args.customSpells.args.buffList.args[v.name..""..k] = {
             order = orderNumber,
             type = 'toggle',
             name = v.name,
@@ -1071,8 +1107,6 @@ function RightMenu()
     EasyMenu(menu, optionsDropDown, "cursor", 0, 0, "MENU")
 
 end
-
-
 
 LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, GetOptions)
 function addon:OpenOptions(...)
