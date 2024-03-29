@@ -52,9 +52,11 @@ v1.0.2
     - Range function has been added. If the player is not in range,
         it will appear transparent.
     - Fixed the Ebon Might icon not showing up.
+
 v1.0.1
     - Added icon to map section
     - Frame hiding function added
+
 v1.0.0
     - Initial release
 ]=]
