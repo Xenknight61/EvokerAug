@@ -5,7 +5,7 @@
 ## Author: xenknight
 ## X-Category: Evoker
 ## SavedVariables: EvokerAugDB
-## OptionalDeps: ibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0
+## OptionalDeps: Ace3, LibDBIcon-1.0, LibSharedMedia-3.0
 ## IconTexture: Interface\AddOns\EvokerAug\Config\Media\bar
 
 ## X-Curse-Project-ID: 993748
