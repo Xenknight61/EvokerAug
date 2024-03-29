@@ -29,21 +29,6 @@ jobs:
           echo "WAGO_API_TOKEN: $WAGO_API_TOKEN"
           echo "GITHUB_OAUTH: $GITHUB_OAUTH"
           echo "DISCORD_WEBHOOK: $DISCORD_WEBHOOK"
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: BigWigsMods/packager@master
-        with:
-          args: -p 993748 -w 26709 -a L6JDoxGv
-
-
-      - name: Upload to Github Actions
-        uses: actions/upload-artifact@v4
-        with:
-          name: EvokerAug
-          path: .release/*.zip
-
 
       - name: Discord notification          
         uses: Ilshidur/action-discord@master
