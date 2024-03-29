@@ -3,7 +3,7 @@ name: Packager
 on:
   push:
     tags:
-      - 'v*'
+      - '**'
 
 jobs:
   packager:
