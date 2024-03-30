@@ -95,7 +95,7 @@ local function RepositionBuffIcons(playerFrame)
     for k, icon in pairs(playerFrame["buff"]) do
         if type(icon) == "table" and not string.match(k, "Text$") then
             icon:SetPoint("LEFT", playerFrame, "RIGHT", playerFrame["buff"].xOffset, 0)
-            playerFrame["buff"].xOffset = playerFrame["buff"].xOffset + 20
+            playerFrame["buff"].xOffset = playerFrame["buff"].xOffset + addon.db.profile.buttonHeight
         end
     end
 end
@@ -103,6 +103,9 @@ end
 local function RemoveBuffIcon(playerFrame, buffID)
     if playerFrame and buffID then
         if playerFrame["buff"][buffID] then
+            if playerFrame["buff"][buffID].iconid == 5199639 and addon.db.profile.prescienceBuffSoundName ~= "None" then
+                PlaySoundFile(addon.db.profile.prescienceBuffSoundFile, "Master")
+            end
             playerFrame["buff"][buffID.."Text"].ticker:Cancel()
             playerFrame["buff"][buffID.."Text"]:Hide()
             playerFrame["buff"][buffID.."Text"]:ClearAllPoints()
@@ -112,24 +115,27 @@ local function RemoveBuffIcon(playerFrame, buffID)
             playerFrame["buff"][buffID]:ClearAllPoints()
             playerFrame["buff"][buffID]:SetParent(nil)
             playerFrame["buff"][buffID] = nil
+            playerFrame.texture:SetSize(150, addon.db.profile.buttonHeight)
 
             RepositionBuffIcons(playerFrame)
         end
     end
 end
 
-local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon)
+
+local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon, startTimer)
     if playerFrame == nil then
         return
     end
     if playerFrame["buff"][auraInstanceID] then
         if playerFrame["buff"][auraInstanceID.."Text"] then
             playerFrame["buff"][auraInstanceID.."Text"].timestamp = timestamp
-
+            playerFrame["buff"][auraInstanceID.."Text"].starttimestamp = startTimer
         end
         return
     end
     playerFrame["buff"][auraInstanceID] =  playerFrame:CreateTexture(nil, "OVERLAY")
+    playerFrame["buff"][auraInstanceID].iconid = icon
     playerFrame["buff"][auraInstanceID]:SetTexture(icon)
     playerFrame["buff"][auraInstanceID]:SetSize(addon.db.profile.spellIconSize, addon.db.profile.spellIconSize)
     playerFrame["buff"][auraInstanceID]:SetPoint("LEFT", playerFrame, "RIGHT", playerFrame["buff"].xOffset, 0)
@@ -138,9 +144,10 @@ local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon)
     playerFrame["buff"][auraInstanceID.."Text"] = playerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     playerFrame["buff"][auraInstanceID.."Text"]:SetPoint("CENTER", playerFrame["buff"][auraInstanceID], "CENTER", 0, 0)
     playerFrame["buff"][auraInstanceID.."Text"]:SetTextColor(1, 1, 1)
-    playerFrame["buff"][auraInstanceID.."Text"]:SetFont("Fonts\\ARIALN.TTF", 12, "OUTLINE")
+    playerFrame["buff"][auraInstanceID.."Text"]:SetFont("Fonts\\ARIALN.TTF", addon.db.profile.spellIconTextSize, "OUTLINE")
     playerFrame["buff"][auraInstanceID.."Text"]:Show()
     playerFrame["buff"][auraInstanceID.."Text"].timestamp = timestamp
+    playerFrame["buff"][auraInstanceID.."Text"].starttimestamp = startTimer
     playerFrame["buff"][auraInstanceID.."Text"].ticker = C_Timer.NewTicker(1, function()
         local duration = playerFrame["buff"][auraInstanceID.."Text"].timestamp - GetTime()
         if duration <= 0 then
@@ -158,8 +165,17 @@ local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon)
         else
             playerFrame["buff"][auraInstanceID.."Text"]:SetTextColor(1, 0, 0)
         end
+
+        if addon.db.profile.prescienceBarEnable and icon == 5199639 then
+            local remainingWidth = 150 * (duration / playerFrame["buff"][auraInstanceID.."Text"].starttimestamp)
+            if duration <= 0 then
+                playerFrame.texture:SetSize(0, addon.db.profile.buttonHeight)
+            else
+                playerFrame.texture:SetSize(remainingWidth, addon.db.profile.buttonHeight)
+            end
+        end
     end)
-    playerFrame["buff"].xOffset = playerFrame["buff"].xOffset + 20
+    playerFrame["buff"].xOffset = playerFrame["buff"].xOffset + addon.db.profile.buttonHeight
 
     -- if timestamp then
     --     local remainingTime = timestamp - GetTime()
@@ -183,7 +199,7 @@ local function AddBuffIcons(playerFrame, playerName)
     for k, v in pairs(addon.db.profile.buffList) do
         local spellTable = C_UnitAuras.GetAuraDataBySpellName(playerName, v, "HELPFUL")
         if spellTable then
-            AddBuffIcon(playerFrame, spellTable.auraInstanceID, spellTable.expirationTime, spellTable.icon)
+            AddBuffIcon(playerFrame, spellTable.auraInstanceID, spellTable.expirationTime, spellTable.icon, spellTable.duration)
         end
     end
 end
@@ -299,22 +315,22 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
                 for _, v in pairs(info.addedAuras) do
                     if addon.db.profile.buffList[v.spellId] then
                         if v.expirationTime > 0 then
-                            AddBuffIcon(selectedPlayerFrames[frameIndex], v.auraInstanceID, v.expirationTime, v.icon)
+                            AddBuffIcon(selectedPlayerFrames[frameIndex], v.auraInstanceID, v.expirationTime, v.icon, v.duration)
                         end
                     end
                 end
-            end
-            if info.updatedAuraInstanceIDs then
+            elseif info.updatedAuraInstanceIDs then
                 for _, v in pairs(info.updatedAuraInstanceIDs) do
                     local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, v)
                     if aura and addon.db.profile.buffList[aura.spellId] then
                         if aura.expirationTime > 0 then
-                            AddBuffIcon(selectedPlayerFrames[frameIndex], aura.auraInstanceID, aura.expirationTime, aura.icon)
+                            AddBuffIcon(selectedPlayerFrames[frameIndex], aura.auraInstanceID, aura.expirationTime, aura.icon, aura.duration)
+                        else
+                            print(aura.icon)
                         end
                     end
                 end
-            end
-            if info.removedAuraInstanceIDs then
+            elseif info.removedAuraInstanceIDs then
                 for _, buffID in ipairs(info.removedAuraInstanceIDs) do
                     RemoveBuffIcon(selectedPlayerFrames[frameIndex], buffID)
                 end
@@ -344,21 +360,16 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
     selectedPlayerFrames[frameIndex].texture:SetPoint('TOP', selectedPlayerFrames[frameIndex], 'TOP')
     selectedPlayerFrames[frameIndex].texture:SetPoint('BOTTOM', selectedPlayerFrames[frameIndex], 'BOTTOM')
     selectedPlayerFrames[frameIndex].texture:SetPoint('LEFT', selectedPlayerFrames[frameIndex], 'LEFT')
-    selectedPlayerFrames[frameIndex].texture:SetSize(150, 20)
+    selectedPlayerFrames[frameIndex].texture:SetSize(150, addon.db.profile.buttonHeight)
     selectedPlayerFrames[frameIndex].texture:SetTexture(addon.db.profile.backgroundTextTexture)
 
 
-    -- Oyuncu adını gösteren bir metin oluştur
     local playerNameText = selectedPlayerFrames[frameIndex]:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     playerNameText:SetPoint("CENTER", selectedPlayerFrames[frameIndex], "CENTER", 0, 0)
     playerNameText:SetText(playerName)
     playerNameText:SetJustifyH("CENTER")
     playerNameText:SetJustifyV("MIDDLE")
 
-    -- Tüm çerçeveleri oyuncu isimlerine göre sırala
-    --table.sort(selectedPlayerFrames, sortFramesByName)
-
-    -- Sıralama sonrası çerçevelerin konumlarını güncelle
     local tankCount = 0
     for i, frame in ipairs(selectedPlayerFrames) do
         if frame.role == "TANK" then
@@ -496,8 +507,24 @@ local function GetOptions()
                         order = 3,
                         type = "description",
                     },
+                    discord = {
+                        name = "|cffffff00 Discord |r |cff00ff00 discord.gg/jKGdPTrXQF |r",
+                        order = 3,
+                        type = "description",
+                    },
+                    discordcopy = {
+                        type = "execute",
+                        name = "Copy Discord Link",
+                        order = 4,
+                        func = function()
+                            local editBox = ChatFrame1EditBox
+                            editBox:SetText("discord.gg/jKGdPTrXQF")
+                            editBox:HighlightText()
+                            editBox:SetFocus()
+                        end,
+                    },
                     pd2 = {
-                        name = "\n\n\n", order = 4, type = "description",
+                        name = "\n\n", order = 5, type = "description",
                     },
                     h1 = {
                         type = 'header',
@@ -533,7 +560,7 @@ local function GetOptions()
                         order = 10,
                     },
                     sortType = {
-                        order = 12,
+                        order = 11,
                         type = 'select',
                         name = "Sort Type",
                         desc = "Choose which attribute to sort player frames by",
@@ -558,9 +585,14 @@ local function GetOptions()
                             end
                         end,
                     },
-
+                    l8 = {
+                        type = 'description',
+                        width = 0.15,
+                        name = '',
+                        order = 12,
+                    },
                     buttontexture = {
-                        order = 14,
+                        order = 13,
                         type = 'select',
                         name = "Button Texture",
                         desc = "Change Texture",
@@ -577,16 +609,11 @@ local function GetOptions()
                             end
                         end
                     },
-                    h4 = {
-                        type = 'description',
-                        name = '    ',
-                        order = 15,
-                        width = 3
-                    },
+
                     buttonHeight = {
                         type = 'range',
-                        name = 'Button height',
-                        desc = 'Height of the assist buttons (a positive value)',
+                        name = 'Frame Height',
+                        desc = 'Set Frame height',
                         min = 20, max = 40, step = 1,
                         get = function() return addon.db.profile.buttonHeight end,
                         set = function(info, value)
@@ -605,13 +632,18 @@ local function GetOptions()
                                 end
                             end
                         end,
-                        order = 16,
+                        order = 14,
                     },
-
+                    l9 = {
+                        type = 'description',
+                        width = 0.15,
+                        name = '',
+                        order = 15,
+                    },
                     IconbuttonHeight = {
                         type = 'range',
-                        name = 'Spell Size',
-                        desc = 'Size of spells',
+                        name = 'Icon Size',
+                        desc = 'Set icon size',
                         min = 20, max = 40, step = 1,
                         get = function() return addon.db.profile.spellIconSize end,
                         set = function(info, value)
@@ -629,20 +661,42 @@ local function GetOptions()
                             end
 
                         end,
-                        order = 18,
+                        order = 16,
+                    },
+                    IconTextSize = {
+                        type = 'range',
+                        name = 'Timer Text Size',
+                        desc = 'Set the size of the text in the icon',
+                        min = 12, max = 20, step = 1,
+                        get = function() return addon.db.profile.spellIconTextSize end,
+                        set = function(info, value)
+
+                            addon.db.profile.spellIconTextSize = value
+
+                            for k, v in pairs(selectedPlayerFrames) do
+                                if v["buff"] then
+                                    for k2, v2 in pairs(selectedPlayerFrames[k]["buff"]) do
+                                        if type(v2) == "table" and string.match(k2, "Text$") then
+                                            v2:SetFont("Fonts\\ARIALN.TTF", addon.db.profile.spellIconTextSize, "OUTLINE")
+                                        end
+                                    end
+                                end
+                            end
+
+                        end,
+                        order = 16,
                     },
                     h3 = {
                         type = 'description',
                         name = '    ',
-                        order = 19,
+                        order = 17,
                         width = 3
                     },
                     unlockHeader = {
-                        order = 20,
+                        order = 18,
                         type = 'toggle',
                         name = "UnLock Header",
                         desc = " ",
-                        width = 1,
                         get = function() return
                             addon.db.profile.headerunlock
                         end,
@@ -651,11 +705,10 @@ local function GetOptions()
                         end,
                     },
                     frameHide = {
-                        order = 21,
+                        order = 19,
                         type = 'toggle',
                         name = "Hide Frame",
                         desc = " ",
-                        width = 1,
                         get = function() return
                             selectedPlayerFrameContainer:IsShown()
                         end,
@@ -663,15 +716,45 @@ local function GetOptions()
                             HideAllSubFrames()
                         end,
                     },
+                    h5 = {
+                        type = 'header',
+                        name = 'Prescience Buff',
+                        order = 22,
+                    },
+                    presciencebar = {
+                        order = 23,
+                        type = 'toggle',
+                        name = "Prescience Bar",
+                        desc = "When enabled for Prescience, the dynamic bar is shown; when disabled, it is hidden.",
+                        get = function() return
+                            addon.db.profile.prescienceBarEnable
+                        end,
+                        set = function(info, value)
+                            addon.db.profile.prescienceBarEnable = value
+                        end,
+                    },
+                    prescienceSound = {
+                        order = 24,
+                        type = 'select',
+                        name = "Prescience Sound",
+                        desc = "The sound to be heard when Buff is finished",
+                        values = AceGUIWidgetLSMlists.sound,
+                        dialogControl = 'LSM30_Sound',
+                        get = function() return addon.db.profile.prescienceBuffSoundName or "None" end,
+                        set = function(info, key)
+                            addon.db.profile.prescienceBuffSoundFile = AceGUIWidgetLSMlists.sound[key]
+                            addon.db.profile.prescienceBuffSoundName = key
+                        end
+                    },
                     h2 = {
                         type = 'header',
                         name = 'Macros',
                         order = 40,
                     },
                     allowModifierAlt = {
-                        name = "Alt key usage",
+                        name = "Alt Key usage",
                         type = "toggle",
-                        order = 42,
+                        order = 41,
                         get = function(info) return addon.db.profile.macroAltClick end,
                         set = function(_, value)
                             addon.db.profile.macroAltClick = value
@@ -679,10 +762,16 @@ local function GetOptions()
                         end,
                         width = 0.8,
                     },
-                    allowModifierShift = {
-                        name = "Shift key usage",
-                        type = "toggle",
+                    l1 = {
+                        type = 'description',
+                        width = 0.3,
+                        name = '',
                         order = 42,
+                    },
+                    allowModifierShift = {
+                        name = "Shift Key usage",
+                        type = "toggle",
+                        order = 43,
                         get = function(info) return addon.db.profile.macroShiftClick end,
                         set = function(_, value)
                             addon.db.profile.macroShiftClick = value
@@ -691,9 +780,9 @@ local function GetOptions()
                         width = 0.8,
                     },
                     allowModifierCtrl = {
-                        name = "Ctrl key usage",
+                        name = "Ctrl Key usage",
                         type = "toggle",
-                        order = 43,
+                        order = 44,
                         get = function(info) return addon.db.profile.macroCtrlClick end,
                         set = function(_, value)
                             addon.db.profile.macroCtrlClick = value
@@ -701,10 +790,16 @@ local function GetOptions()
                         end,
                         width = 0.8,
                     },
+                    l2 = {
+                        type = 'description',
+                        width = 0.3,
+                        name = '',
+                        order = 45,
+                    },
                     rightModifier = {
-                        name = "Right Click",
+                        name = "Right Key Usage",
                         type = "toggle",
-                        order = 43,
+                        order = 46,
                         get = function(info) return addon.db.profile.macroRightClick end,
                         set = function(_, value)
                             addon.db.profile.macroRightClick = value
@@ -712,11 +807,12 @@ local function GetOptions()
                         end,
                         width = 0.8,
                     },
+
                     tankClickSpell = {
                         name = "Tank click",
                         type = "select",
                         values = addon.db.profile.charSpell,
-                        order = 45,
+                        order = 47,
                         desc = "Select the spell to be used when left click key is pressed",
                         set = function(info, value)
                             addon.db.profile.tankSpellLeftClick = value
@@ -724,12 +820,17 @@ local function GetOptions()
                         end,
                         get = function() return addon.db.profile.tankSpellLeftClick end,
                     },
-
+                    l3 = {
+                        type = 'description',
+                        width = 0.15,
+                        name = '',
+                        order = 48,
+                    },
                     dpsClickSpell = {
                         name = "DPS click",
                         type = "select",
                         values = addon.db.profile.charSpell,
-                        order = 47,
+                        order = 49,
                         desc = "Select the spell to be used when left click key is pressed",
                         set = function(info, value)
                             addon.db.profile.dpsSpellLeftClick = value
@@ -737,11 +838,44 @@ local function GetOptions()
                         end,
                         get = function() return addon.db.profile.dpsSpellLeftClick end,
                     },
+
+                    RightttankClickSpell = {
+                        name = "Right Tank click",
+                        type = "select",
+                        values = addon.db.profile.charSpell,
+                        order = 50,
+                        desc = "Select the spell to be used when right click key is pressed",
+                        set = function(info, value)
+                            addon.db.profile.tankSpellRightClick = value
+                            UpdatePlayerFrame()
+                        end,
+                        get = function() return addon.db.profile.tankSpellRightClick end,
+                    },
+                    l4 = {
+                        type = 'description',
+                        width = 0.15,
+                        name = '',
+                        order = 51,
+                    },
+                    RighttdpsClickSpell = {
+                        name = "Right DPS click",
+                        type = "select",
+                        values = addon.db.profile.charSpell,
+                        order = 52,
+                        desc = "Select the spell to be used when right click key is pressed",
+                        set = function(info, value)
+                            addon.db.profile.dpsSpellRightClick = value
+                            UpdatePlayerFrame()
+                        end,
+                        get = function() return addon.db.profile.dpsSpellRightClick end,
+                    },
+
+
                     ShifttankClickSpell = {
                         name = "Shift Tank click",
                         type = "select",
                         values = addon.db.profile.charSpell,
-                        order = 48,
+                        order = 53,
                         desc = "Select the spell to be used when shift click key is pressed",
                         set = function(info, value)
                             addon.db.profile.ShiftankSpellLeftClick = value
@@ -749,12 +883,17 @@ local function GetOptions()
                         end,
                         get = function() return addon.db.profile.ShiftankSpellLeftClick end,
                     },
-
+                    l5 = {
+                        type = 'description',
+                        width = 0.15,
+                        name = '',
+                        order = 54,
+                    },
                     ShiftdpsClickSpell = {
                         name = "Shift DPS click",
                         type = "select",
                         values = addon.db.profile.charSpell,
-                        order = 50,
+                        order = 55,
                         desc = "Select the spell to be used when shift click key is pressed",
                         set = function(info, value)
                             addon.db.profile.ShifdpsSpellLeftClick = value
@@ -762,11 +901,13 @@ local function GetOptions()
                         end,
                         get = function() return addon.db.profile.ShifdpsSpellLeftClick end,
                     },
+
+
                     CtrlttankClickSpell = {
                         name = "Ctrl Tank click",
                         type = "select",
                         values = addon.db.profile.charSpell,
-                        order = 51,
+                        order = 56,
                         desc = "Select the spell to be used when ctrl click key is pressed",
                         set = function(info, value)
                             addon.db.profile.CtrlTankSpellLeftClick = value
@@ -774,12 +915,17 @@ local function GetOptions()
                         end,
                         get = function() return addon.db.profile.CtrlTankSpellLeftClick end,
                     },
-
+                    l6 = {
+                        type = 'description',
+                        width = 0.15,
+                        name = '',
+                        order = 57,
+                    },
                     CtrltdpsClickSpell = {
                         name = "Ctrl DPS click",
                         type = "select",
                         values = addon.db.profile.charSpell,
-                        order = 53,
+                        order = 58,
                         desc = "Select the spell to be used when ctrl click key is pressed",
                         set = function(info, value)
                             addon.db.profile.CtrlDpsSpellLeftClick = value
@@ -787,11 +933,12 @@ local function GetOptions()
                         end,
                         get = function() return addon.db.profile.CtrlDpsSpellLeftClick end,
                     },
+
                     AltttankClickSpell = {
                         name = "Alt Tank click",
                         type = "select",
                         values = addon.db.profile.charSpell,
-                        order = 54,
+                        order = 59,
                         desc = "Select the spell to be used when alt click key is pressed",
                         set = function(info, value)
                             addon.db.profile.AltTankSpellLeftClick = value
@@ -799,12 +946,17 @@ local function GetOptions()
                         end,
                         get = function() return addon.db.profile.AltTankSpellLeftClick end,
                     },
-
+                    l7 = {
+                        type = 'description',
+                        width = 0.15,
+                        name = '',
+                        order = 60,
+                    },
                     AlttdpsClickSpell = {
                         name = "Alt DPS click",
                         type = "select",
                         values = addon.db.profile.charSpell,
-                        order = 56,
+                        order = 61,
                         desc = "Select the spell to be used when alt click key is pressed",
                         set = function(info, value)
                             addon.db.profile.AltDpsSpellLeftClick = value
@@ -812,31 +964,7 @@ local function GetOptions()
                         end,
                         get = function() return addon.db.profile.AltDpsSpellLeftClick end,
                     },
-                    RightttankClickSpell = {
-                        name = "Right Tank click",
-                        type = "select",
-                        values = addon.db.profile.charSpell,
-                        order = 57,
-                        desc = "Select the spell to be used when alt click key is pressed",
-                        set = function(info, value)
-                            addon.db.profile.tankSpellRightClick = value
-                            UpdatePlayerFrame()
-                        end,
-                        get = function() return addon.db.profile.tankSpellRightClick end,
-                    },
 
-                    RighttdpsClickSpell = {
-                        name = "Right DPS click",
-                        type = "select",
-                        values = addon.db.profile.charSpell,
-                        order = 58,
-                        desc = "Select the spell to be used when alt click key is pressed",
-                        set = function(info, value)
-                            addon.db.profile.dpsSpellRightClick = value
-                            UpdatePlayerFrame()
-                        end,
-                        get = function() return addon.db.profile.dpsSpellRightClick end,
-                    },
                 },
             },
             customSpells = {
@@ -1133,7 +1261,7 @@ end
 
 LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, GetOptions)
 function addon:OpenOptions(...)
-    AceConfigDialog:SetDefaultSize(addonName, 465, 550)
+    AceConfigDialog:SetDefaultSize(addonName, 460, 750)
 	if select('#', ...) > 0 then
 		AceConfigDialog:Open(addonName)
 		AceConfigDialog:SelectGroup(addonName, ...)

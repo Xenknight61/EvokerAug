@@ -16,12 +16,16 @@ addon.DefaultProfile = {
         },
         buttonHeight = 25,
         spellIconSize = 25,
+        spellIconTextSize = 12,
         backgroundTextTexture = "Interface\\Addons\\EvokerAug\\Media\\bar",
         backgroundTextTexture2 = "EvokerAug",
         headerunlock = false,
         sortByClass = false,
         sortType = "NAME",
         charSpell = {},
+        prescienceBarEnable = true,
+        prescienceBuffSoundFile = "",
+        prescienceBuffSoundName = "None",
 
         macroAltClick = true,
         macroShiftClick = true,
@@ -49,8 +53,15 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.3",
+    ["version"] = "1.0.4",
     ["changelog"] = [=[
+
+v1.0.4
+    - Discord information added
+    - Added frame tracking feature for Prescience buff (on/off feature)
+    - Added sound feature for Prescience buff
+    - Fixed some typos
+    - Added countdown size adjustment function in the icon
 
 v1.0.3
     - Fixed the issue of making yourself appear transparent
@@ -69,6 +80,5 @@ v1.0.1
 
 v1.0.0
     - Initial release
-
 ]=]
 }
