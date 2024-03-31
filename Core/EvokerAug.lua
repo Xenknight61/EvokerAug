@@ -149,6 +149,9 @@ local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon, startTi
     playerFrame["buff"][auraInstanceID.."Text"].timestamp = timestamp
     playerFrame["buff"][auraInstanceID.."Text"].starttimestamp = startTimer
     playerFrame["buff"][auraInstanceID.."Text"].ticker = C_Timer.NewTicker(1, function()
+        if playerFrame["buff"] == nil and playerFrame["buff"][auraInstanceID.."Text"] then
+            return
+        end
         local duration = playerFrame["buff"][auraInstanceID.."Text"].timestamp - GetTime()
         if duration <= 0 then
             playerFrame["buff"][auraInstanceID.."Text"]:Hide()
@@ -319,18 +322,18 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
                         end
                     end
                 end
-            elseif info.updatedAuraInstanceIDs then
+            end
+            if info.updatedAuraInstanceIDs then
                 for _, v in pairs(info.updatedAuraInstanceIDs) do
                     local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, v)
                     if aura and addon.db.profile.buffList[aura.spellId] then
                         if aura.expirationTime > 0 then
                             AddBuffIcon(selectedPlayerFrames[frameIndex], aura.auraInstanceID, aura.expirationTime, aura.icon, aura.duration)
-                        else
-                            print(aura.icon)
                         end
                     end
                 end
-            elseif info.removedAuraInstanceIDs then
+            end
+            if info.removedAuraInstanceIDs then
                 for _, buffID in ipairs(info.removedAuraInstanceIDs) do
                     RemoveBuffIcon(selectedPlayerFrames[frameIndex], buffID)
                 end
@@ -435,12 +438,18 @@ local function GroupUpdate()
         local unit
 
         for i, member in ipairs(partyMembers) do
+
             if member.name == playerName then
                 memberInParty = true
                 if playerName == UnitName("player") then
                     unit = "player"
                 else
                     unit = (IsInRaid() and "raid" .. i) or (IsInGroup() and "party" .. i) or "player"
+                end
+                local isOffline = not UnitIsConnected(unit)
+                if isOffline then
+                    DeleteSelectedPlayerFrame(playerName)
+                    break
                 end
                 break
             end

@@ -53,8 +53,11 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.4",
+    ["version"] = "1.0.5",
     ["changelog"] = [=[
+v1.0.5
+    - The issue of more than one ebon might appearing in buff tracking has been resolved
+    - When the person in the frame goes offline, they will be automatically deleted from the frame.
 
 v1.0.4
     - Discord information added
