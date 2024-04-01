@@ -26,38 +26,51 @@ addon.DefaultProfile = {
         prescienceBarEnable = true,
         prescienceBuffSoundFile = "",
         prescienceBuffSoundName = "None",
-
-        macroAltClick = true,
-        macroShiftClick = true,
-        macroCtrlClick = true,
-        macroRightClick = true,
-
-        tankSpellLeftClick = 360827,
-        ShiftankSpellLeftClick = 395152,
-        CtrlTankSpellLeftClick = 361469,
-        AltTankSpellLeftClick = 361227,
-        dpsSpellLeftClick = 409311,
-        ShifdpsSpellLeftClick = 395152,
-        CtrlDpsSpellLeftClick = 355913,
-        AltDpsSpellLeftClick = 361227,
-        tankSpellRightClick = 360995,
-        dpsSpellRightClick = 360995,
+        macro = {
+            AltClick = true,
+            ShiftClick = true,
+            CtrlClick = true,
+            RightClick = true,
+        },
+        tankMacros = {
+            LeftSpell = 360827,
+            RightSpell = 360995,
+            ShiftSpell = 395152,
+            CtrlSpell = 361469,
+            AltSpell = 361227,
+        },
+        dpsMacros = {
+            LeftSpell = 409311,
+            RightSpell = 360995,
+            ShiftSpell = 395152,
+            CtrlSpell = 355913,
+            AltSpell = 361227,
+        },
         buffList = {
             [410089] = "Prescience",
             [360827] = "Blistering Scales",
             [395296] = "Ebon Might",
             [395152] = "Ebon Might",
             [369459] = "Source of Magic",
-        }
+        },
+        omniCDSupport = false,
     }
 }
 
 addon.Config = {
-    ["version"] = "1.0.5",
+    ["version"] = "1.0.6",
     ["changelog"] = [=[
+v1.0.6
+    - OmniCD support has been added, you can see cooldown
+        next to the frame (optional, you can turn it off and on)
+    - Auto fill has been added. Frame will automatically select
+        (Not suitable for Raid groups.)
+
 v1.0.5
-    - The issue of more than one ebon might appearing in buff tracking has been resolved
-    - When the person in the frame goes offline, they will be automatically deleted from the frame.
+    - The issue of more than one ebon might appearing in buff tracking
+        has been resolved
+    - When the person in the frame goes offline, they will be
+        automatically deleted from the frame.
 
 v1.0.4
     - Discord information added

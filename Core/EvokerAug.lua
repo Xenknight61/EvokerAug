@@ -4,11 +4,36 @@ local addon = LibStub("AceAddon-3.0"):GetAddon(addonName)
 ---@cast addon +AceConsole-3.0
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceConfigRegistry = LibStub("AceConfigRegistry-3.0")
+local icon = LibStub("LibDBIcon-1.0")
 local EvokerAugOptions = {}
 local checkboxStates = {}
 local selectedPlayerFrames = {}
 local selectedPlayerFrameContainer
 local distanceTimer
+
+-- Map Icon ---
+
+---@diagnostic disable-next-line: missing-fields
+local miniButton = LibStub("LibDataBroker-1.1"):NewDataObject(addonName,
+{
+    type = "launcher",
+    text = addonName,
+    icon = "Interface\\AddOns\\EvokerAug\\Media\\augevoker-logo",
+    OnClick = function(self, btn)
+        if btn == "LeftButton" then
+            addon:OpenOptions()
+        elseif btn == "RightButton" then
+            HideAllSubFrames()
+        end
+    end,
+    OnTooltipShow = function(tooltip)
+        if not tooltip or not tooltip.AddLine then return end
+        tooltip:AddLine(addonName)
+        tooltip:AddLine(" ")
+        tooltip:AddLine("|cffeda55fLeft Click|r to open settings.", 0.2, 1, 0.2)
+        tooltip:AddLine("|cffeda55fRight Click|r to show/hide frame.", 0.2, 1, 0.2)
+    end,
+})
 
 
 local function sortFramesByName(a, b)
@@ -55,27 +80,7 @@ local function HideAllSubFrames()
 end
 
 local function createMiniMapIcon()
-    local miniButton = LibStub("LibDataBroker-1.1"):NewDataObject(addonName,
-        {
-            type = "launcher",
-            text = addonName,
-            icon = "Interface\\AddOns\\EvokerAug\\Media\\augevoker-logo",
-            OnClick = function(self, btn)
-                if btn == "LeftButton" then
-                    addon:OpenOptions()
-                elseif btn == "RightButton" then
-                    HideAllSubFrames()
-                end
-            end,
-            OnTooltipShow = function(tooltip)
-                if not tooltip or not tooltip.AddLine then return end
-                tooltip:AddLine(addonName)
-                tooltip:AddLine(" ")
-                tooltip:AddLine("|cffeda55fLeft Click|r to open settings.", 0.2, 1, 0.2)
-                tooltip:AddLine("|cffeda55fRight Click|r to show/hide frame.", 0.2, 1, 0.2)
-            end,
-    })
-    local icon = LibStub("LibDBIcon-1.0", true)
+    ---@diagnostic disable-next-line: param-type-mismatch
     icon:Register(addonName, miniButton, addon.db.profile.minimap)
 end
 
@@ -233,47 +238,50 @@ end
 
 local function MacroUpdate(frame)
     if frame.role == "TANK" then
-        frame:SetAttribute("spell", addon.db.profile.charSpell[addon.db.profile.tankSpellLeftClick]);
-        if addon.db.profile.macroAltClick then
-            frame:SetAttribute("alt-spell", addon.db.profile.charSpell[addon.db.profile.AltTankSpellLeftClick]);
+        frame:SetAttribute("spell", addon.db.profile.charSpell[addon.db.profile.tankMacros.LeftSpell]);
+        if addon.db.profile.macro.AltClick then
+            frame:SetAttribute("alt-spell", addon.db.profile.charSpell[addon.db.profile.tankMacros.AltSpell]);
         else
             frame:SetAttribute("alt-spell", nil)
         end
-        if addon.db.profile.macroShiftClick then
-            frame:SetAttribute("shift-spell", addon.db.profile.charSpell[addon.db.profile.ShiftankSpellLeftClick]);
+        if addon.db.profile.macro.ShiftClick then
+            frame:SetAttribute("shift-spell", addon.db.profile.charSpell[addon.db.profile.tankMacros.ShiftSpell]);
         else
             frame:SetAttribute("shift-spell", nil)
         end
-        if addon.db.profile.macroCtrlClick then
-            frame:SetAttribute("ctrl-spell", addon.db.profile.charSpell[addon.db.profile.CtrlTankSpellLeftClick]);
+        if addon.db.profile.macro.CtrlClick then
+            frame:SetAttribute("ctrl-spell", addon.db.profile.charSpell[addon.db.profile.tankMacros.CtrlSpell]);
         else
             frame:SetAttribute("ctrl-spell", nil)
         end
-        if addon.db.profile.macroRightClick then
-            frame:SetAttribute("spell2", addon.db.profile.charSpell[addon.db.profile.tankSpellRightClick]);
+        if addon.db.profile.macro.RightClick then
+            frame:SetAttribute("spell2", addon.db.profile.charSpell[addon.db.profile.tankMacros.RightSpell]);
         else
-            frame:SetAttribute("spell2", nil)
+            frame:SetAttribute("spell2", "")
+            frame:SetAttribute("ctrl-spell2", "");
+            frame:SetAttribute("alt-spell2", "");
+            frame:SetAttribute("shift-spell2", "");
         end
 
     else
-        frame:SetAttribute("spell", addon.db.profile.charSpell[addon.db.profile.dpsSpellLeftClick])
-        if addon.db.profile.macroAltClick then
-            frame:SetAttribute("alt-spell1", addon.db.profile.charSpell[addon.db.profile.AltDpsSpellLeftClick])
+        frame:SetAttribute("spell", addon.db.profile.charSpell[addon.db.profile.dpsMacros.LeftSpell])
+        if addon.db.profile.macro.AltClick then
+            frame:SetAttribute("alt-spell1", addon.db.profile.charSpell[addon.db.profile.dpsMacros.AltSpell])
         else
             frame:SetAttribute("alt-spell1", nil)
         end
-        if addon.db.profile.macroShiftClick then
-            frame:SetAttribute("shift-spell1", addon.db.profile.charSpell[addon.db.profile.ShifdpsSpellLeftClick])
+        if addon.db.profile.macro.ShiftClick then
+            frame:SetAttribute("shift-spell1", addon.db.profile.charSpell[addon.db.profile.dpsMacros.ShiftSpell])
         else
             frame:SetAttribute("shift-spell1", nil)
         end
-        if addon.db.profile.macroCtrlClick then
-            frame:SetAttribute("ctrl-spell1", addon.db.profile.charSpell[addon.db.profile.CtrlDpsSpellLeftClick])
+        if addon.db.profile.macro.CtrlClick then
+            frame:SetAttribute("ctrl-spell1", addon.db.profile.charSpell[addon.db.profile.dpsMacros.CtrlSpell])
         else
             frame:SetAttribute("ctrl-spell1", nil)
         end
-        if addon.db.profile.macroRightClick then
-            frame:SetAttribute("spell2", addon.db.profile.charSpell[addon.db.profile.dpsSpellRightClick]);
+        if addon.db.profile.macro.RightClick then
+            frame:SetAttribute("spell2", addon.db.profile.charSpell[addon.db.profile.dpsMacros.RightSpell]);
             frame:SetAttribute("ctrl-spell2", "");
             frame:SetAttribute("alt-spell2", "");
             frame:SetAttribute("shift-spell2", "");
@@ -294,9 +302,9 @@ local function UpdatePlayerFrame()
     end
 end
 
-local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitIndex)
+local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitIndex, unittt)
     local frameIndex = #selectedPlayerFrames + 1
-    selectedPlayerFrames[frameIndex] = CreateFrame("Button", selectedPlayerFrameContainer, UIParent, BackdropTemplateMixin and "BackdropTemplate, SecureUnitButtonTemplate")
+    selectedPlayerFrames[frameIndex] = CreateFrame("Button", "EvokerAugPartyFrame"..unittt, UIParent, BackdropTemplateMixin and "BackdropTemplate, SecureUnitButtonTemplate")
     selectedPlayerFrames[frameIndex]:SetSize(150, addon.db.profile.buttonHeight)
     selectedPlayerFrames[frameIndex]["buff"] = {}
     selectedPlayerFrames[frameIndex]["buff"].xOffset = 0
@@ -425,6 +433,32 @@ local function DeleteSelectedPlayerFrame(playerName)
         if distanceTimer then
             distanceTimer:Cancel()
             distanceTimer = nil
+        end
+    end
+end
+
+local function FrameAutoFill()
+    local partyMembers = GetHomePartyInfo()
+    if not IsInRaid() then
+        for i, member in ipairs(partyMembers) do
+            local memberInParty = false
+            local unit
+            if member.name == UnitName("player") then
+                unit = "player"
+            else
+                unit = (IsInGroup() and "party" .. i) or "player"
+            end
+            if member.role ~= "HEALER" and unit ~= "player" then
+                for _, frame in ipairs(selectedPlayerFrames) do
+                    if frame.playerName == member.name then
+                        memberInParty = true
+                        break
+                    end
+                end
+                if not memberInParty then
+                    CreateSelectedPlayerFrame(member.name, member.class, member.role, unit, member.unit)
+                end
+            end
         end
     end
 end
@@ -764,9 +798,9 @@ local function GetOptions()
                         name = "Alt Key usage",
                         type = "toggle",
                         order = 41,
-                        get = function(info) return addon.db.profile.macroAltClick end,
+                        get = function(info) return addon.db.profile.macro.AltClick end,
                         set = function(_, value)
-                            addon.db.profile.macroAltClick = value
+                            addon.db.profile.macro.AltClick = value
                             UpdatePlayerFrame()
                         end,
                         width = 0.8,
@@ -781,9 +815,9 @@ local function GetOptions()
                         name = "Shift Key usage",
                         type = "toggle",
                         order = 43,
-                        get = function(info) return addon.db.profile.macroShiftClick end,
+                        get = function(info) return addon.db.profile.macro.ShiftClick end,
                         set = function(_, value)
-                            addon.db.profile.macroShiftClick = value
+                            addon.db.profile.macro.ShiftClick = value
                             UpdatePlayerFrame()
                         end,
                         width = 0.8,
@@ -792,9 +826,9 @@ local function GetOptions()
                         name = "Ctrl Key usage",
                         type = "toggle",
                         order = 44,
-                        get = function(info) return addon.db.profile.macroCtrlClick end,
+                        get = function(info) return addon.db.profile.macro.CtrlClick end,
                         set = function(_, value)
-                            addon.db.profile.macroCtrlClick = value
+                            addon.db.profile.macro.CtrlClick = value
                             UpdatePlayerFrame()
                         end,
                         width = 0.8,
@@ -809,9 +843,9 @@ local function GetOptions()
                         name = "Right Key Usage",
                         type = "toggle",
                         order = 46,
-                        get = function(info) return addon.db.profile.macroRightClick end,
+                        get = function(info) return addon.db.profile.macro.RightClick end,
                         set = function(_, value)
-                            addon.db.profile.macroRightClick = value
+                            addon.db.profile.macro.RightClick = value
                             UpdatePlayerFrame()
                         end,
                         width = 0.8,
@@ -824,10 +858,10 @@ local function GetOptions()
                         order = 47,
                         desc = "Select the spell to be used when left click key is pressed",
                         set = function(info, value)
-                            addon.db.profile.tankSpellLeftClick = value
+                            addon.db.profile.tankMacros.LeftSpell = value
                             UpdatePlayerFrame()
                         end,
-                        get = function() return addon.db.profile.tankSpellLeftClick end,
+                        get = function() return addon.db.profile.tankMacros.LeftSpell end,
                     },
                     l3 = {
                         type = 'description',
@@ -842,10 +876,10 @@ local function GetOptions()
                         order = 49,
                         desc = "Select the spell to be used when left click key is pressed",
                         set = function(info, value)
-                            addon.db.profile.dpsSpellLeftClick = value
+                            addon.db.profile.dpsMacros.LeftSpell = value
                             UpdatePlayerFrame()
                         end,
-                        get = function() return addon.db.profile.dpsSpellLeftClick end,
+                        get = function() return addon.db.profile.dpsMacros.LeftSpell end,
                     },
 
                     RightttankClickSpell = {
@@ -855,10 +889,10 @@ local function GetOptions()
                         order = 50,
                         desc = "Select the spell to be used when right click key is pressed",
                         set = function(info, value)
-                            addon.db.profile.tankSpellRightClick = value
+                            addon.db.profile.tankMacros.RightSpell = value
                             UpdatePlayerFrame()
                         end,
-                        get = function() return addon.db.profile.tankSpellRightClick end,
+                        get = function() return addon.db.profile.tankMacros.RightSpell end,
                     },
                     l4 = {
                         type = 'description',
@@ -873,10 +907,10 @@ local function GetOptions()
                         order = 52,
                         desc = "Select the spell to be used when right click key is pressed",
                         set = function(info, value)
-                            addon.db.profile.dpsSpellRightClick = value
+                            addon.db.profile.dpsMacros.RightSpell = value
                             UpdatePlayerFrame()
                         end,
-                        get = function() return addon.db.profile.dpsSpellRightClick end,
+                        get = function() return addon.db.profile.dpsMacros.RightSpell end,
                     },
 
 
@@ -887,10 +921,10 @@ local function GetOptions()
                         order = 53,
                         desc = "Select the spell to be used when shift click key is pressed",
                         set = function(info, value)
-                            addon.db.profile.ShiftankSpellLeftClick = value
+                            addon.db.profile.tankMacros.ShiftSpell = value
                             UpdatePlayerFrame()
                         end,
-                        get = function() return addon.db.profile.ShiftankSpellLeftClick end,
+                        get = function() return addon.db.profile.tankMacros.ShiftSpell end,
                     },
                     l5 = {
                         type = 'description',
@@ -905,10 +939,10 @@ local function GetOptions()
                         order = 55,
                         desc = "Select the spell to be used when shift click key is pressed",
                         set = function(info, value)
-                            addon.db.profile.ShifdpsSpellLeftClick = value
+                            addon.db.profile.dpsMacros.ShiftSpell = value
                             UpdatePlayerFrame()
                         end,
-                        get = function() return addon.db.profile.ShifdpsSpellLeftClick end,
+                        get = function() return addon.db.profile.dpsMacros.ShiftSpell end,
                     },
 
 
@@ -919,10 +953,10 @@ local function GetOptions()
                         order = 56,
                         desc = "Select the spell to be used when ctrl click key is pressed",
                         set = function(info, value)
-                            addon.db.profile.CtrlTankSpellLeftClick = value
+                            addon.db.profile.tankMacros.CtrlSpell = value
                             UpdatePlayerFrame()
                         end,
-                        get = function() return addon.db.profile.CtrlTankSpellLeftClick end,
+                        get = function() return addon.db.profile.tankMacros.CtrlSpell end,
                     },
                     l6 = {
                         type = 'description',
@@ -937,10 +971,10 @@ local function GetOptions()
                         order = 58,
                         desc = "Select the spell to be used when ctrl click key is pressed",
                         set = function(info, value)
-                            addon.db.profile.CtrlDpsSpellLeftClick = value
+                            addon.db.profile.dpsMacros.CtrlSpell = value
                             UpdatePlayerFrame()
                         end,
-                        get = function() return addon.db.profile.CtrlDpsSpellLeftClick end,
+                        get = function() return addon.db.profile.dpsMacros.CtrlSpell end,
                     },
 
                     AltttankClickSpell = {
@@ -950,10 +984,10 @@ local function GetOptions()
                         order = 59,
                         desc = "Select the spell to be used when alt click key is pressed",
                         set = function(info, value)
-                            addon.db.profile.AltTankSpellLeftClick = value
+                            addon.db.profile.tankMacros.AltSpell = value
                             UpdatePlayerFrame()
                         end,
-                        get = function() return addon.db.profile.AltTankSpellLeftClick end,
+                        get = function() return addon.db.profile.tankMacros.AltSpell end,
                     },
                     l7 = {
                         type = 'description',
@@ -968,10 +1002,10 @@ local function GetOptions()
                         order = 61,
                         desc = "Select the spell to be used when alt click key is pressed",
                         set = function(info, value)
-                            addon.db.profile.AltDpsSpellLeftClick = value
+                            addon.db.profile.dpsMacros.AltSpell = value
                             UpdatePlayerFrame()
                         end,
-                        get = function() return addon.db.profile.AltDpsSpellLeftClick end,
+                        get = function() return addon.db.profile.dpsMacros.AltSpell end,
                     },
 
                 },
@@ -1041,6 +1075,19 @@ local function GetOptions()
                             },
                         },
                     },
+                    OmniCDSupport = {
+                        order = 4,
+                        type = 'toggle',
+                        name = "OmniCD Support",
+                        desc = "If you have OmniCD installed, you can see the cooldowns of the spells you have added.",
+                        get = function() return addon.db.profile.omniCDSupport end,
+                        set = function(_, value)
+                            if GetAddOnEnableState(UnitName('player'), 2) then -- C_AddOns_GetAddOnEnableState("OmniCD", UnitName('player'))  == 2
+                                addon.db.profile.omniCDSupport = value
+                                C_UI.Reload()
+                            end
+                        end,
+                    }
                 },
             },
             profiles = profiles,
@@ -1081,6 +1128,7 @@ function addon:OnInitialize()
 		addon:OpenOptions(strsplit(' ', cmd or ""))
 	end, true)
     createMiniMapIcon()
+
 end
 
 function addon:OnEnable()-- PLAYER_LOGIN
@@ -1096,7 +1144,6 @@ function addon:OnEnable()-- PLAYER_LOGIN
     selectedPlayerFrameContainer:EnableMouse(true)
     selectedPlayerFrameContainer:RegisterForDrag("LeftButton")
     selectedPlayerFrameContainer:RegisterEvent("GROUP_ROSTER_UPDATE")
-
     selectedPlayerFrameContainer:SetScript("OnDragStart", function(sel)
         if self.db.profile.headerunlock then
             sel:StartMoving()
@@ -1131,7 +1178,7 @@ function addon:OnEnable()-- PLAYER_LOGIN
 
 
     local addonNameTexture = selectedPlayerFrameContainer:CreateTexture(nil, "OVERLAY")
-    addonNameTexture:SetAllPoints(selectedPlayerFrameContainer)
+    addonNameTexture:SetAllPoints()
     addonNameTexture:SetTexture("Interface\\Addons\\EvokerAug\\Media\\bar")
     addonNameTexture:SetVertexColor(0.24, 0.24, 0.24, 1.0)
 
@@ -1144,6 +1191,14 @@ function addon:OnEnable()-- PLAYER_LOGIN
     for i, spell in ipairs(spell_list["EVOKER"]["AUGMENTATION"]) do
         self.db.profile.charSpell[spell.spellID] = spell.name
     end
+
+    if addon.db.profile.omniCDSupport then
+        local ofunc = OmniCD and OmniCD.AddUnitFrameData
+        if ofunc then
+            ofunc("EvokerAug", "EvokerAugPartyFrame", "unit", 1)
+        end
+    end
+
 end
 
 local function copytable(dst, src)
@@ -1195,7 +1250,6 @@ function GetHomePartyInfo()
                 unit = "player"
                 fullName, class =  UnitName(unit), UnitClass(unit)
             end
-            --local combatRole = UnitGroupRolesAssigned(unit)
             local _, _, _, _, combatRole = GetSpecializationInfo(GetSpecialization(unit) or 0)
             if not combatRole then
                 combatRole = UnitGroupRolesAssigned(unit)
@@ -1203,14 +1257,14 @@ function GetHomePartyInfo()
             local name = GetCharacterName(fullName)
 
             if name and class and combatRole then
-                table.insert(partyMembers, {name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole})-- Sınıfı da tabloya ekliyoruz
+                table.insert(partyMembers, {name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole, unit = i})-- Sınıfı da tabloya ekliyoruz
             end
         end
     else
         local name, class = UnitName("player"), UnitClass("player")
         local specializationIndex = GetSpecialization() or 0
         local _, _, _, _, combatRole, _ = GetSpecializationInfo(specializationIndex)
-        table.insert(partyMembers, {name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole})
+        table.insert(partyMembers, {name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole, unit = 1})
     end
 
     return partyMembers
@@ -1236,7 +1290,7 @@ function RightMenu()
                         unit = (IsInRaid() and "raid" .. i) or (IsInGroup() and "party" .. i) or "player"
                     end
                     checkboxStates[member.name] = true
-                    CreateSelectedPlayerFrame(member.name, member.class, member.role, unit)
+                    CreateSelectedPlayerFrame(member.name, member.class, member.role, unit, member.unit)
                 end
             end
         })
@@ -1252,6 +1306,13 @@ function RightMenu()
             hasArrow = true,
             notCheckable = true,
             menuList = PartyList,
+        },
+        {
+            text = 'Auto Fill (M+)',
+            notCheckable = true,
+            func = function()
+                FrameAutoFill()
+            end,
         },
         {
             text = 'Setting',
