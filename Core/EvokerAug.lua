@@ -10,7 +10,7 @@ local checkboxStates = {}
 local selectedPlayerFrames = {}
 local selectedPlayerFrameContainer
 local distanceTimer
-
+local progressBar
 -- Map Icon ---
 
 ---@diagnostic disable-next-line: missing-fields
@@ -82,6 +82,50 @@ end
 local function createMiniMapIcon()
     ---@diagnostic disable-next-line: param-type-mismatch
     icon:Register(addonName, miniButton, addon.db.profile.minimap)
+end
+
+-- Ebon Might Proggres Bar
+
+function CreateProgressBar()
+
+    if addon.db.profile.ebonmightProgressBarEnable then
+        if not progressBar then
+            progressBar = CreateFrame("StatusBar", "MyProgressBar", UIParent)
+            progressBar:SetSize(200, 20) -- Boyutları ayarlayın
+            progressBar:SetPoint("CENTER", selectedPlayerFrameContainer, "CENTER", 0, 20) -- Konumu ayarlayın
+            progressBar:SetMinMaxValues(0, 100) -- Minimum ve maksimum değerleri ayarlayın
+            progressBar:SetValue(0) -- Mevcut değeri ayarlayın
+            progressBar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar") -- Progress barın görünümü
+            progressBar:SetStatusBarColor(0, 1, 0) -- Progress bar rengi (RGB)
+
+            local text = progressBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            text:SetPoint("CENTER", progressBar, "CENTER")
+            text:SetText("Ebon Might")
+        else
+            progressBar:Show()
+        end
+
+
+        selectedPlayerFrameContainer:SetScript("OnUpdate", function ()
+            local aura = C_UnitAuras.GetAuraDataBySpellName("player", "Ebon Might", "HELPFUL") -- Buffun bilgilerini al
+            if (not aura) then return end
+            if aura.expirationTime then
+                local currentTime = GetTime()
+                local remainingTime = aura.expirationTime - currentTime
+                local duration = aura.duration / 100
+                local progress = remainingTime / duration
+                progressBar:SetValue(progress)
+            else
+                progressBar:SetValue(0)
+            end
+        end)
+    elseif not addon.db.profile.ebonmightProgressBarEnable and progressBar then
+        selectedPlayerFrameContainer:SetScript("OnUpdate", nil)
+        if progressBar then
+            progressBar:Hide()
+        end
+    end
+
 end
 
 
@@ -304,6 +348,7 @@ end
 
 local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitIndex, unittt)
     local frameIndex = #selectedPlayerFrames + 1
+    checkboxStates[playerName] = true
     selectedPlayerFrames[frameIndex] = CreateFrame("Button", "EvokerAugPartyFrame"..unittt, UIParent, BackdropTemplateMixin and "BackdropTemplate, SecureUnitButtonTemplate")
     selectedPlayerFrames[frameIndex]:SetSize(150, addon.db.profile.buttonHeight)
     selectedPlayerFrames[frameIndex]["buff"] = {}
@@ -469,6 +514,8 @@ local function GroupUpdate()
     for _, frame in ipairs(selectedPlayerFrames) do
         local playerName = frame.playerName
         local memberInParty = false
+        local unitCheckChanged = false
+        local unittt
         local unit
 
         for i, member in ipairs(partyMembers) do
@@ -481,6 +528,12 @@ local function GroupUpdate()
                     unit = (IsInRaid() and "raid" .. i) or (IsInGroup() and "party" .. i) or "player"
                 end
                 local isOffline = not UnitIsConnected(unit)
+                if not unitCheckChanged then
+                    if frame.unit ~= unit then
+                        unitCheckChanged = true
+                        unittt = unit
+                    end
+                end
                 if isOffline then
                     DeleteSelectedPlayerFrame(playerName)
                     break
@@ -490,8 +543,10 @@ local function GroupUpdate()
         end
 
         if memberInParty then
-            frame.unit = unit
-            frame:SetAttribute("unit", frame.unit);
+            if unitCheckChanged then
+                DeleteSelectedPlayerFrame(playerName)
+                CreateSelectedPlayerFrame(playerName, frame.class, frame.role, unit, unittt)
+            end
         else
             DeleteSelectedPlayerFrame(playerName)
         end
@@ -512,6 +567,33 @@ local function GetClasses()
     end
 
     return Augment
+end
+
+local function SpellListAdd(spellId)
+    if spellId then
+        local name, _, icon = GetSpellInfo(spellId)
+        if name and not addon.db.profile.buffList[spellId] then
+            EvokerAugOptions.args.customSpells.args.buffList.args[name..""..spellId] = {
+                order = spellId,
+                type = 'toggle',
+                name = name,
+                imageCoords = { 0.07, 0.93, 0.07, 0.93 },
+                image = icon,
+                arg = spellId,
+                set = function(_, value)
+                    if value then
+                        addon.db.profile.buffList[spellId] = name
+                    else
+                        addon.db.profile.buffList[spellId] = nil
+                    end
+                end,
+                get = function()
+                    return addon.db.profile.buffList[spellId] ~= nil
+                end,
+            }
+            AceConfigRegistry:NotifyChange(addonName)
+        end
+    end
 end
 
 local function GetOptions()
@@ -789,6 +871,19 @@ local function GetOptions()
                             addon.db.profile.prescienceBuffSoundName = key
                         end
                     },
+                    ebonmight = {
+                        order = 23,
+                        type = 'toggle',
+                        name = "Ebon Might Progress Bar",
+                        desc = "When enabled for Ebon Might, the dynamic bar is shown; when disabled, it is hidden.",
+                        get = function() return
+                            addon.db.profile.ebonmightProgressBarEnable
+                        end,
+                        set = function(info, value)
+                            addon.db.profile.ebonmightProgressBarEnable = value
+                            CreateProgressBar()
+                        end,
+                    },
                     h2 = {
                         type = 'header',
                         name = 'Macros',
@@ -1035,31 +1130,8 @@ local function GetOptions()
                         end,
                         set = function(_, state)
                             local spellId = tonumber(state)
-                            if spellId then
-                                local name, _, icon = GetSpellInfo(spellId)
-                                if name and not addon.db.profile.buffList[spellId] then
-                                    EvokerAugOptions.args.customSpells.args.buffList.args[name] = {  -- !TODO: yeni bir fonksiyon oluştur ve ona aktar
-                                        order = orderNumber,
-                                        type = 'toggle',
-                                        name = name,
-                                        imageCoords = { 0.07, 0.93, 0.07, 0.93 },
-                                        image = icon,
-                                        arg = spellId,
-                                        set = function(_, value)
-                                            if value then
-                                                addon.db.profile.buffList[spellId] = name
-                                            else
-                                                addon.db.profile.buffList[spellId] = nil
-                                            end
-                                        end,
-                                        get = function()
-                                            return addon.db.profile.buffList[spellId] ~= nil
-                                        end,
-                                    }
-                                    orderNumber = orderNumber + 1
-                                    AceConfigRegistry:NotifyChange(addonName)
-                                end
-                            end
+                            SpellListAdd(spellId)
+
                         end,
                     },
                     buffList = {
@@ -1136,7 +1208,6 @@ function addon:OnEnable()-- PLAYER_LOGIN
     local lib = LibStub("LibSharedMedia-3.0")
     lib:Register(lib.MediaType.STATUSBAR, "EvokerAug", [[Interface\AddOns\EvokerAug\Media\bar]])
 
-
     selectedPlayerFrameContainer = CreateFrame("Frame", "EvokerAug", UIParent, BackdropTemplateMixin and "BackdropTemplate")
     selectedPlayerFrameContainer:SetPoint(self.db.profile.positions.point, self.db.profile.positions.xOffset, self.db.profile.positions.yOffset)
     selectedPlayerFrameContainer:SetSize(200, 20)
@@ -1144,6 +1215,7 @@ function addon:OnEnable()-- PLAYER_LOGIN
     selectedPlayerFrameContainer:EnableMouse(true)
     selectedPlayerFrameContainer:RegisterForDrag("LeftButton")
     selectedPlayerFrameContainer:RegisterEvent("GROUP_ROSTER_UPDATE")
+
     selectedPlayerFrameContainer:SetScript("OnDragStart", function(sel)
         if self.db.profile.headerunlock then
             sel:StartMoving()
@@ -1198,6 +1270,16 @@ function addon:OnEnable()-- PLAYER_LOGIN
             ofunc("EvokerAug", "EvokerAugPartyFrame", "unit", 1)
         end
     end
+
+
+    -----------------------------
+
+    if addon.db.profile.ebonmightProgressBarEnable then
+        CreateProgressBar()
+    end
+
+
+
 
 end
 
@@ -1281,7 +1363,6 @@ function RightMenu()
             checked = function() return checkboxStates[member.name] end,
             func = function(_, arg1, arg2, checked)
                 if checked then
-                    checkboxStates[member.name] = false
                     DeleteSelectedPlayerFrame(member.name)
                 else
                     if member.name == UnitName("player") then
@@ -1289,7 +1370,6 @@ function RightMenu()
                     else
                         unit = (IsInRaid() and "raid" .. i) or (IsInGroup() and "party" .. i) or "player"
                     end
-                    checkboxStates[member.name] = true
                     CreateSelectedPlayerFrame(member.name, member.class, member.role, unit, member.unit)
                 end
             end
@@ -1312,6 +1392,16 @@ function RightMenu()
             notCheckable = true,
             func = function()
                 FrameAutoFill()
+            end,
+        },
+        {
+            text = 'Clear Frame',
+            notCheckable = true,
+            func = function()
+                for i, frame in pairs(checkboxStates) do
+                    local playerName = i
+                    DeleteSelectedPlayerFrame(playerName)
+                end
             end,
         },
         {

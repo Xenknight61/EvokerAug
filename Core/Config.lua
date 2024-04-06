@@ -26,6 +26,7 @@ addon.DefaultProfile = {
         prescienceBarEnable = true,
         prescienceBuffSoundFile = "",
         prescienceBuffSoundName = "None",
+        ebonmightProgressBarEnable = true,
         macro = {
             AltClick = true,
             ShiftClick = true,
@@ -58,8 +59,12 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.6",
+    ["version"] = "1.0.7",
     ["changelog"] = [=[
+v1.0.7
+    - Added frame clear to clear the frame
+    - Added progress bar to keep track of Ebon Might Buff
+    - The error that occurred when adding a new spell id during buff tracking has been fixed.
 v1.0.6
     - OmniCD support has been added, you can see cooldown
         next to the frame (optional, you can turn it off and on)
