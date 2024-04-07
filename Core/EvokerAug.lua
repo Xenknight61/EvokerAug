@@ -164,7 +164,6 @@ local function RemoveBuffIcon(playerFrame, buffID)
             playerFrame["buff"][buffID]:ClearAllPoints()
             playerFrame["buff"][buffID]:SetParent(nil)
             playerFrame["buff"][buffID] = nil
-            playerFrame.texture:SetSize(150, addon.db.profile.buttonHeight)
 
             RepositionBuffIcons(playerFrame)
         end
@@ -221,7 +220,7 @@ local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon, startTi
         if addon.db.profile.prescienceBarEnable and icon == 5199639 then
             local remainingWidth = 150 * (duration / playerFrame["buff"][auraInstanceID.."Text"].starttimestamp)
             if duration <= 0 then
-                playerFrame.texture:SetSize(0, addon.db.profile.buttonHeight)
+                playerFrame.texture:SetSize(1, addon.db.profile.buttonHeight)
             else
                 playerFrame.texture:SetSize(remainingWidth, addon.db.profile.buttonHeight)
             end
@@ -416,7 +415,11 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
     selectedPlayerFrames[frameIndex].texture:SetPoint('TOP', selectedPlayerFrames[frameIndex], 'TOP')
     selectedPlayerFrames[frameIndex].texture:SetPoint('BOTTOM', selectedPlayerFrames[frameIndex], 'BOTTOM')
     selectedPlayerFrames[frameIndex].texture:SetPoint('LEFT', selectedPlayerFrames[frameIndex], 'LEFT')
-    selectedPlayerFrames[frameIndex].texture:SetSize(150, addon.db.profile.buttonHeight)
+    if addon.db.profile.prescienceBarEnable then
+        selectedPlayerFrames[frameIndex].texture:SetSize(1, addon.db.profile.buttonHeight)
+    else
+        selectedPlayerFrames[frameIndex].texture:SetSize(150, addon.db.profile.buttonHeight)
+    end
     selectedPlayerFrames[frameIndex].texture:SetTexture(addon.db.profile.backgroundTextTexture)
 
 
@@ -431,7 +434,8 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
         if frame.role == "TANK" then
             tankCount = tankCount + 1
             frame:ClearAllPoints()
-            frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0, tankCount * addon.db.profile.buttonHeight)
+            local ebonMightCount = addon.db.profile.ebonmightProgressBarEnable and 20 or 0
+            frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0, ebonMightCount + (tankCount * addon.db.profile.buttonHeight))
         else
             frame:ClearAllPoints()
             frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0, (i - tankCount) * -addon.db.profile.buttonHeight)
@@ -467,7 +471,8 @@ local function DeleteSelectedPlayerFrame(playerName)
         for i, frame in ipairs(selectedPlayerFrames) do
             if frame.role == "TANK" then
                 tankCount = tankCount + 1
-                frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0, tankCount * addon.db.profile.buttonHeight)
+                local ebonMightCount = addon.db.profile.ebonmightProgressBarEnable and 20 or 0
+                frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0, ebonMightCount + (tankCount * addon.db.profile.buttonHeight))
             else
                 frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0, (i - tankCount) * -addon.db.profile.buttonHeight)
             end

@@ -59,12 +59,17 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.7",
+    ["version"] = "1.0.8",
     ["changelog"] = [=[
+v1.0.8
+    - Frame overlapping problem with Ebon Might buff progress bar has been resolved
+    - If the Prescience Bar is active, the bar will not appear full unless there is a buff on it.
+
 v1.0.7
     - Added frame clear to clear the frame
     - Added progress bar to keep track of Ebon Might Buff
     - The error that occurred when adding a new spell id during buff tracking has been fixed.
+
 v1.0.6
     - OmniCD support has been added, you can see cooldown
         next to the frame (optional, you can turn it off and on)
