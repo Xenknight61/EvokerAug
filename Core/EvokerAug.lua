@@ -567,8 +567,8 @@ end
 local function GetClasses()
     local Augment = {}
     for k, v in pairs(AllSpellList["Augmentation"]) do
-        local spellName, _, icon = GetSpellInfo(k)
-        Augment[k] = {icon = icon, name = spellName}
+        local spell = C_Spell.GetSpellInfo(k)
+        Augment[k] = {icon = spell.iconID, name = spell.name}
     end
 
     return Augment
@@ -576,18 +576,18 @@ end
 
 local function SpellListAdd(spellId)
     if spellId then
-        local name, _, icon = GetSpellInfo(spellId)
-        if name and not addon.db.profile.buffList[spellId] then
-            EvokerAugOptions.args.customSpells.args.buffList.args[name..""..spellId] = {
+        local Spell = C_Spell.GetSpellInfo(spellId)
+        if Spell and Spell.name and not addon.db.profile.buffList[spellId] then
+            EvokerAugOptions.args.customSpells.args.buffList.args[Spell.name..""..spellId] = {
                 order = spellId,
                 type = 'toggle',
-                name = name,
+                name = Spell.iconID,
                 imageCoords = { 0.07, 0.93, 0.07, 0.93 },
                 image = icon,
                 arg = spellId,
                 set = function(_, value)
                     if value then
-                        addon.db.profile.buffList[spellId] = name
+                        addon.db.profile.buffList[spellId] = Spell.name
                     else
                         addon.db.profile.buffList[spellId] = nil
                     end

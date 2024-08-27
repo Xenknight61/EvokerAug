@@ -1,4 +1,4 @@
-## Interface: 100206
+## Interface: 110002
 ## Version: @project-version@
 ## Title: EvokerAug
 ## Notes: Evoker Aug is a simple addon that adds a small frame to the screen that shows the current number of evokers in the zone. It also has a small button that can be clicked to show a list of all the evokers in the zone.

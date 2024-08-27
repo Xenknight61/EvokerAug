@@ -59,8 +59,10 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.8",
+    ["version"] = "1.0.9",
     ["changelog"] = [=[
+v1.0.9
+    - TWW Update
 v1.0.8
     - Frame overlapping problem with Ebon Might buff progress bar has been resolved
     - If the Prescience Bar is active, the bar will not appear full unless there is a buff on it.
