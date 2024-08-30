@@ -59,8 +59,11 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.9",
+    ["version"] = "1.0.10",
     ["changelog"] = [=[
+v1.0.10
+    - Fixed the problem of menu not opening
+    - Buff not being deleted issue fixed
 v1.0.9
     - TWW Update
 v1.0.8

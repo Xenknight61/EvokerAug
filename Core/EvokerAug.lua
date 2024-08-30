@@ -5,35 +5,40 @@ local addon = LibStub("AceAddon-3.0"):GetAddon(addonName)
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceConfigRegistry = LibStub("AceConfigRegistry-3.0")
 local icon = LibStub("LibDBIcon-1.0")
+local Menu = LibStub("LibUIDropDownMenu-4.0")
+local GetAddOnEnableState = C_AddOns.GetAddOnEnableState or function(n, c) return GetAddOnEnableState(c, n) end  -- Deprecated in 10.2.0
 local EvokerAugOptions = {}
 local checkboxStates = {}
 local selectedPlayerFrames = {}
 local selectedPlayerFrameContainer
 local distanceTimer
 local progressBar
+local addonNameText
+local combatLockdown = false
+local isCombatButton = false
 -- Map Icon ---
 
 ---@diagnostic disable-next-line: missing-fields
 local miniButton = LibStub("LibDataBroker-1.1"):NewDataObject(addonName,
-{
-    type = "launcher",
-    text = addonName,
-    icon = "Interface\\AddOns\\EvokerAug\\Media\\augevoker-logo",
-    OnClick = function(self, btn)
-        if btn == "LeftButton" then
-            addon:OpenOptions()
-        elseif btn == "RightButton" then
-            HideAllSubFrames()
-        end
-    end,
-    OnTooltipShow = function(tooltip)
-        if not tooltip or not tooltip.AddLine then return end
-        tooltip:AddLine(addonName)
-        tooltip:AddLine(" ")
-        tooltip:AddLine("|cffeda55fLeft Click|r to open settings.", 0.2, 1, 0.2)
-        tooltip:AddLine("|cffeda55fRight Click|r to show/hide frame.", 0.2, 1, 0.2)
-    end,
-})
+    {
+        type = "launcher",
+        text = addonName,
+        icon = "Interface\\AddOns\\EvokerAug\\Media\\augevoker-logo",
+        OnClick = function(self, btn)
+            if btn == "LeftButton" then
+                addon:OpenOptions()
+            elseif btn == "RightButton" then
+                HideAllSubFrames()
+            end
+        end,
+        OnTooltipShow = function(tooltip)
+            if not tooltip or not tooltip.AddLine then return end
+            tooltip:AddLine(addonName)
+            tooltip:AddLine(" ")
+            tooltip:AddLine("|cffeda55fLeft Click|r to open settings.", 0.2, 1, 0.2)
+            tooltip:AddLine("|cffeda55fRight Click|r to show/hide frame.", 0.2, 1, 0.2)
+        end,
+    })
 
 
 local function sortFramesByName(a, b)
@@ -50,11 +55,11 @@ end
 
 local isFound
 local changelog = (addon.Config["changelog"]:gsub("^[ \t\n]*", "|cff99cdff"):gsub("\n\nv([%d%.]+)", function(ver)
-	if not isFound and ver ~= addon.Config["version"] then
-		isFound = true
-		return "|cff808080\n\nv" .. ver
-	end
-end):gsub("\t", "\32\32\32\32\32\32\32\32")or "|cff808080\n\nv") .. "|r"
+    if not isFound and ver ~= addon.Config["version"] then
+        isFound = true
+        return "|cff808080\n\nv" .. ver
+    end
+end):gsub("\t", "\32\32\32\32\32\32\32\32") or "|cff808080\n\nv") .. "|r"
 
 local sortTypes = {
     ["NAME"] = sortFramesByName,
@@ -87,16 +92,15 @@ end
 -- Ebon Might Proggres Bar
 
 function CreateProgressBar()
-
     if addon.db.profile.ebonmightProgressBarEnable then
         if not progressBar then
             progressBar = CreateFrame("StatusBar", "MyProgressBar", UIParent)
-            progressBar:SetSize(200, 20) -- Boyutları ayarlayın
+            progressBar:SetSize(200, 20)                                                  -- Boyutları ayarlayın
             progressBar:SetPoint("CENTER", selectedPlayerFrameContainer, "CENTER", 0, 20) -- Konumu ayarlayın
-            progressBar:SetMinMaxValues(0, 100) -- Minimum ve maksimum değerleri ayarlayın
-            progressBar:SetValue(0) -- Mevcut değeri ayarlayın
-            progressBar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar") -- Progress barın görünümü
-            progressBar:SetStatusBarColor(0, 1, 0) -- Progress bar rengi (RGB)
+            progressBar:SetMinMaxValues(0, 100)                                           -- Minimum ve maksimum değerleri ayarlayın
+            progressBar:SetValue(0)                                                       -- Mevcut değeri ayarlayın
+            progressBar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")    -- Progress barın görünümü
+            progressBar:SetStatusBarColor(0, 1, 0)                                        -- Progress bar rengi (RGB)
 
             local text = progressBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             text:SetPoint("CENTER", progressBar, "CENTER")
@@ -106,7 +110,7 @@ function CreateProgressBar()
         end
 
 
-        selectedPlayerFrameContainer:SetScript("OnUpdate", function ()
+        selectedPlayerFrameContainer:SetScript("OnUpdate", function()
             local aura = C_UnitAuras.GetAuraDataBySpellName("player", "Ebon Might", "HELPFUL") -- Buffun bilgilerini al
             if (not aura) then return end
             if aura.expirationTime then
@@ -125,9 +129,7 @@ function CreateProgressBar()
             progressBar:Hide()
         end
     end
-
 end
-
 
 ---- Player Buffs Icon -----
 local function GetCharacterName(fullName)
@@ -155,10 +157,10 @@ local function RemoveBuffIcon(playerFrame, buffID)
             if playerFrame["buff"][buffID].iconid == 5199639 and addon.db.profile.prescienceBuffSoundName ~= "None" then
                 PlaySoundFile(addon.db.profile.prescienceBuffSoundFile, "Master")
             end
-            playerFrame["buff"][buffID.."Text"].ticker:Cancel()
-            playerFrame["buff"][buffID.."Text"]:Hide()
-            playerFrame["buff"][buffID.."Text"]:ClearAllPoints()
-            playerFrame["buff"][buffID.."Text"] = nil
+            playerFrame["buff"][buffID .. "Text"].ticker:Cancel()
+            playerFrame["buff"][buffID .. "Text"]:Hide()
+            playerFrame["buff"][buffID .. "Text"]:ClearAllPoints()
+            playerFrame["buff"][buffID .. "Text"] = nil
 
             playerFrame["buff"][buffID]:Hide()
             playerFrame["buff"][buffID]:ClearAllPoints()
@@ -176,69 +178,60 @@ local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon, startTi
         return
     end
     if playerFrame["buff"][auraInstanceID] then
-        if playerFrame["buff"][auraInstanceID.."Text"] then
-            playerFrame["buff"][auraInstanceID.."Text"].timestamp = timestamp
-            playerFrame["buff"][auraInstanceID.."Text"].starttimestamp = startTimer
+        if playerFrame["buff"][auraInstanceID .. "Text"] then
+            playerFrame["buff"][auraInstanceID .. "Text"].timestamp = timestamp
+            playerFrame["buff"][auraInstanceID .. "Text"].starttimestamp = startTimer
         end
         return
     end
-    playerFrame["buff"][auraInstanceID] =  playerFrame:CreateTexture(nil, "OVERLAY")
+    playerFrame["buff"][auraInstanceID] = playerFrame:CreateTexture(nil, "OVERLAY")
     playerFrame["buff"][auraInstanceID].iconid = icon
     playerFrame["buff"][auraInstanceID]:SetTexture(icon)
     playerFrame["buff"][auraInstanceID]:SetSize(addon.db.profile.spellIconSize, addon.db.profile.spellIconSize)
     playerFrame["buff"][auraInstanceID]:SetPoint("LEFT", playerFrame, "RIGHT", playerFrame["buff"].xOffset, 0)
     playerFrame["buff"][auraInstanceID]:SetVertexColor(1, 1, 1, 1)
     playerFrame["buff"][auraInstanceID]:Show()
-    playerFrame["buff"][auraInstanceID.."Text"] = playerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    playerFrame["buff"][auraInstanceID.."Text"]:SetPoint("CENTER", playerFrame["buff"][auraInstanceID], "CENTER", 0, 0)
-    playerFrame["buff"][auraInstanceID.."Text"]:SetTextColor(1, 1, 1)
-    playerFrame["buff"][auraInstanceID.."Text"]:SetFont("Fonts\\ARIALN.TTF", addon.db.profile.spellIconTextSize, "OUTLINE")
-    playerFrame["buff"][auraInstanceID.."Text"]:Show()
-    playerFrame["buff"][auraInstanceID.."Text"].timestamp = timestamp
-    playerFrame["buff"][auraInstanceID.."Text"].starttimestamp = startTimer
-    playerFrame["buff"][auraInstanceID.."Text"].ticker = C_Timer.NewTicker(1, function()
-        if playerFrame["buff"] == nil and playerFrame["buff"][auraInstanceID.."Text"] then
+    playerFrame["buff"][auraInstanceID .. "Text"] = playerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    playerFrame["buff"][auraInstanceID .. "Text"]:SetPoint("CENTER", playerFrame["buff"][auraInstanceID], "CENTER", 0, 0)
+    playerFrame["buff"][auraInstanceID .. "Text"]:SetTextColor(1, 1, 1)
+    playerFrame["buff"][auraInstanceID .. "Text"]:SetFont("Fonts\\ARIALN.TTF", addon.db.profile.spellIconTextSize,
+        "OUTLINE")
+    playerFrame["buff"][auraInstanceID .. "Text"]:Show()
+    playerFrame["buff"][auraInstanceID .. "Text"].timestamp = timestamp
+    playerFrame["buff"][auraInstanceID .. "Text"].starttimestamp = startTimer
+    playerFrame["buff"][auraInstanceID .. "Text"].ticker = C_Timer.NewTicker(1, function()
+        if playerFrame["buff"] == nil and playerFrame["buff"][auraInstanceID .. "Text"] then
             return
         end
-        local duration = playerFrame["buff"][auraInstanceID.."Text"].timestamp - GetTime()
-        if duration <= 0 then
-            playerFrame["buff"][auraInstanceID.."Text"]:Hide()
-            playerFrame["buff"][auraInstanceID.."Text"].ticker:Cancel()
-        end
-        if duration <= 20 then
-            playerFrame["buff"][auraInstanceID.."Text"]:SetText(math.floor(duration))
-        else
-            playerFrame["buff"][auraInstanceID.."Text"]:SetText(nil)
-        end
-
-        if duration > 10 then
-            playerFrame["buff"][auraInstanceID.."Text"]:SetTextColor(1, 1, 1)
-        else
-            playerFrame["buff"][auraInstanceID.."Text"]:SetTextColor(1, 0, 0)
-        end
-
+        local duration = playerFrame["buff"][auraInstanceID .. "Text"].timestamp - GetTime()
         if addon.db.profile.prescienceBarEnable and icon == 5199639 then
-            local remainingWidth = 150 * (duration / playerFrame["buff"][auraInstanceID.."Text"].starttimestamp)
+            local remainingWidth = 150 * (duration / playerFrame["buff"][auraInstanceID .. "Text"].starttimestamp)
             if duration <= 0 then
                 playerFrame.texture:SetSize(1, addon.db.profile.buttonHeight)
             else
                 playerFrame.texture:SetSize(remainingWidth, addon.db.profile.buttonHeight)
             end
         end
+        if duration > 10 then
+            playerFrame["buff"][auraInstanceID .. "Text"]:SetTextColor(1, 1, 1)
+        else
+            playerFrame["buff"][auraInstanceID .. "Text"]:SetTextColor(1, 0, 0)
+        end
+        if duration <= 0 then
+            playerFrame["buff"][auraInstanceID .. "Text"]:Hide()
+            playerFrame["buff"][auraInstanceID .. "Text"].ticker:Cancel()
+            RemoveBuffIcon(playerFrame, auraInstanceID)
+        elseif duration <= 20 then
+            playerFrame["buff"][auraInstanceID .. "Text"]:SetText(math.floor(duration))
+        else
+            playerFrame["buff"][auraInstanceID .. "Text"]:SetText(nil)
+        end
+
+
+
+
     end)
     playerFrame["buff"].xOffset = playerFrame["buff"].xOffset + addon.db.profile.buttonHeight
-
-    -- if timestamp then
-    --     local remainingTime = timestamp - GetTime()
-    --     C_Timer.After(remainingTime, function()
-    --         if playerFrame["buff"][auraInstanceID] == nil then
-    --             return
-    --         end
-    --         playerFrame["buff"][auraInstanceID.."Text"].ticker:Cancel()
-
-    --         RemoveBuffIcon(playerFrame, auraInstanceID)
-    --     end)
-    -- end
 end
 
 local function AddBuffIcons(playerFrame, playerName)
@@ -250,13 +243,11 @@ local function AddBuffIcons(playerFrame, playerName)
     for k, v in pairs(addon.db.profile.buffList) do
         local spellTable = C_UnitAuras.GetAuraDataBySpellName(playerName, v, "HELPFUL")
         if spellTable then
-            AddBuffIcon(playerFrame, spellTable.auraInstanceID, spellTable.expirationTime, spellTable.icon, spellTable.duration)
+            AddBuffIcon(playerFrame, spellTable.auraInstanceID, spellTable.expirationTime, spellTable.icon,
+                spellTable.duration)
         end
     end
 end
-
-
-
 
 --- Create Player Frame ----
 
@@ -305,7 +296,6 @@ local function MacroUpdate(frame)
             frame:SetAttribute("alt-spell2", "");
             frame:SetAttribute("shift-spell2", "");
         end
-
     else
         frame:SetAttribute("spell", addon.db.profile.charSpell[addon.db.profile.dpsMacros.LeftSpell])
         if addon.db.profile.macro.AltClick then
@@ -335,8 +325,6 @@ local function MacroUpdate(frame)
             frame:SetAttribute("shift-spell2", "");
         end
     end
-
-
 end
 
 local function UpdatePlayerFrame()
@@ -346,9 +334,13 @@ local function UpdatePlayerFrame()
 end
 
 local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitIndex, unittt)
+    if combatLockdown then
+        return
+    end
     local frameIndex = #selectedPlayerFrames + 1
     checkboxStates[playerName] = true
-    selectedPlayerFrames[frameIndex] = CreateFrame("Button", "EvokerAugPartyFrame"..unittt, UIParent, BackdropTemplateMixin and "BackdropTemplate, SecureUnitButtonTemplate")
+    selectedPlayerFrames[frameIndex] = CreateFrame("Button", "EvokerAugPartyFrame" .. unittt, UIParent,
+        BackdropTemplateMixin and "BackdropTemplate, SecureUnitButtonTemplate")
     selectedPlayerFrames[frameIndex]:SetSize(150, addon.db.profile.buttonHeight)
     selectedPlayerFrames[frameIndex]["buff"] = {}
     selectedPlayerFrames[frameIndex]["buff"].xOffset = 0
@@ -364,36 +356,31 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
 
     selectedPlayerFrames[frameIndex]:RegisterUnitEvent("UNIT_AURA")
     selectedPlayerFrames[frameIndex]:SetScript("OnEvent", function(self, event, unit, info)
-        local playerNam = GetCharacterName(UnitName(unit))
-        if event == "UNIT_AURA" and playerName == playerNam then
-            if info.addedAuras then
+        if event == "UNIT_AURA" then
+            if info.addedAuras and selectedPlayerFrames[frameIndex] and selectedPlayerFrames[frameIndex].unit == unit then
                 for _, v in pairs(info.addedAuras) do
                     if addon.db.profile.buffList[v.spellId] then
-                        if v.expirationTime > 0 then
-                            AddBuffIcon(selectedPlayerFrames[frameIndex], v.auraInstanceID, v.expirationTime, v.icon, v.duration)
+                        if v.expirationTime > 0 and selectedPlayerFrames[frameIndex] then
+                            AddBuffIcon(selectedPlayerFrames[frameIndex], v.auraInstanceID, v.expirationTime, v.icon,
+                                v.duration)
                         end
                     end
                 end
-            end
-            if info.updatedAuraInstanceIDs then
+            elseif info.updatedAuraInstanceIDs and selectedPlayerFrames[frameIndex] and selectedPlayerFrames[frameIndex].unit == unit then
                 for _, v in pairs(info.updatedAuraInstanceIDs) do
                     local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, v)
                     if aura and addon.db.profile.buffList[aura.spellId] then
                         if aura.expirationTime > 0 then
-                            AddBuffIcon(selectedPlayerFrames[frameIndex], aura.auraInstanceID, aura.expirationTime, aura.icon, aura.duration)
+                            AddBuffIcon(selectedPlayerFrames[frameIndex], aura.auraInstanceID, aura.expirationTime,
+                                aura.icon, aura.duration)
                         end
                     end
-                end
-            end
-            if info.removedAuraInstanceIDs then
-                for _, buffID in ipairs(info.removedAuraInstanceIDs) do
-                    RemoveBuffIcon(selectedPlayerFrames[frameIndex], buffID)
                 end
             end
         end
     end)
 
-    selectedPlayerFrames[frameIndex]:SetAttribute('unitName',playerName)
+    selectedPlayerFrames[frameIndex]:SetAttribute('unitName', playerName)
     selectedPlayerFrames[frameIndex]:SetAttribute('unitID', unitIndex)
     selectedPlayerFrames[frameIndex]:SetAttribute("unit", unitIndex);
     selectedPlayerFrames[frameIndex]:SetAttribute("type", "spell")
@@ -403,9 +390,9 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
 
     selectedPlayerFrames[frameIndex]:SetBackdrop({
         bgFile = [=[Interface\Tooltips\UI-Tooltip-Background]=],
-        insets = {top = -1, left = -1, bottom = -1, right = -1}
+        insets = { top = -1, left = -1, bottom = -1, right = -1 }
     })
-    local classColor = RAID_CLASS_COLORS[class] or {r = 0.5, g = 0.5, b = 0.5}
+    local classColor = RAID_CLASS_COLORS[class] or { r = 0.5, g = 0.5, b = 0.5 }
     selectedPlayerFrames[frameIndex]:SetBackdropColor(classColor.r, classColor.g, classColor.b, 0.9)
     selectedPlayerFrames[frameIndex].texture:SetVertexColor(classColor.r, classColor.g, classColor.b, 0.9)
     CheckDistance(selectedPlayerFrames[frameIndex])
@@ -435,10 +422,12 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
             tankCount = tankCount + 1
             frame:ClearAllPoints()
             local ebonMightCount = addon.db.profile.ebonmightProgressBarEnable and 20 or 0
-            frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0, ebonMightCount + (tankCount * addon.db.profile.buttonHeight))
+            frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0,
+                ebonMightCount + (tankCount * addon.db.profile.buttonHeight))
         else
             frame:ClearAllPoints()
-            frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0, (i - tankCount) * -addon.db.profile.buttonHeight)
+            frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0,
+                (i - tankCount) * -addon.db.profile.buttonHeight)
         end
     end
 
@@ -455,7 +444,7 @@ local function DeleteSelectedPlayerFrame(playerName)
             break
         end
     end
-    if playerIndex then
+    if playerIndex and selectedPlayerFrames[playerIndex] then
         selectedPlayerFrames[playerIndex]:Hide()
         selectedPlayerFrames[playerIndex]:ClearAllPoints()
         selectedPlayerFrames[playerIndex]:SetParent(nil)
@@ -472,9 +461,11 @@ local function DeleteSelectedPlayerFrame(playerName)
             if frame.role == "TANK" then
                 tankCount = tankCount + 1
                 local ebonMightCount = addon.db.profile.ebonmightProgressBarEnable and 20 or 0
-                frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0, ebonMightCount + (tankCount * addon.db.profile.buttonHeight))
+                frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0,
+                    ebonMightCount + (tankCount * addon.db.profile.buttonHeight))
             else
-                frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0, (i - tankCount) * -addon.db.profile.buttonHeight)
+                frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0,
+                    (i - tankCount) * -addon.db.profile.buttonHeight)
             end
         end
     end
@@ -488,6 +479,11 @@ local function DeleteSelectedPlayerFrame(playerName)
 end
 
 local function FrameAutoFill()
+    if combatLockdown then
+        isCombatButton = true
+        addonNameText:SetText(addonName .. " (Waiting for combat to end)")
+        return
+    end
     local partyMembers = GetHomePartyInfo()
     if not IsInRaid() then
         for i, member in ipairs(partyMembers) do
@@ -524,7 +520,6 @@ local function GroupUpdate()
         local unit
 
         for i, member in ipairs(partyMembers) do
-
             if member.name == playerName then
                 memberInParty = true
                 if playerName == UnitName("player") then
@@ -568,7 +563,7 @@ local function GetClasses()
     local Augment = {}
     for k, v in pairs(AllSpellList["Augmentation"]) do
         local spell = C_Spell.GetSpellInfo(k)
-        Augment[k] = {icon = spell.iconID, name = spell.name}
+        Augment[k] = { icon = spell.iconID, name = spell.name }
     end
 
     return Augment
@@ -578,7 +573,7 @@ local function SpellListAdd(spellId)
     if spellId then
         local Spell = C_Spell.GetSpellInfo(spellId)
         if Spell and Spell.name and not addon.db.profile.buffList[spellId] then
-            EvokerAugOptions.args.customSpells.args.buffList.args[Spell.name..""..spellId] = {
+            EvokerAugOptions.args.customSpells.args.buffList.args[Spell.name .. "" .. spellId] = {
                 order = spellId,
                 type = 'toggle',
                 name = Spell.iconID,
@@ -604,7 +599,7 @@ end
 local function GetOptions()
     local profiles = LibStub('AceDBOptions-3.0'):GetOptionsTable(addon.db)
     profiles.order = 600
-	profiles.disabled = false
+    profiles.disabled = false
     local orderNumber = 2
     EvokerAugOptions = {
         name = addonName,
@@ -615,11 +610,13 @@ local function GetOptions()
                 order = 1,
                 name = "EvokerAug",
                 type = "group",
-                args={
+                args = {
                     evokerAug = {
                         order = 0,
                         image = "Interface\\Addons\\EvokerAug\\Media\\augevoker-logo",
-                        imageWidth = 64, imageHeight = 64, imageCoords = { 0, 1, 0, 1 },
+                        imageWidth = 64,
+                        imageHeight = 64,
+                        imageCoords = { 0, 1, 0, 1 },
                         type = "description",
                         name = "EvokerAug",
                         fontSize = "large",
@@ -707,10 +704,12 @@ local function GetOptions()
                             for i, frame in ipairs(selectedPlayerFrames) do
                                 if frame.role == "TANK" then
                                     tank = tank + 1
-                                    frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0, tank * addon.db.profile.buttonHeight)
+                                    frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0,
+                                        tank * addon.db.profile.buttonHeight)
                                 else
                                     local dpsCheck = i - tank
-                                    frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0, dpsCheck * -addon.db.profile.buttonHeight)
+                                    frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0,
+                                        dpsCheck * -addon.db.profile.buttonHeight)
                                 end
                             end
                         end,
@@ -744,7 +743,9 @@ local function GetOptions()
                         type = 'range',
                         name = 'Frame Height',
                         desc = 'Set Frame height',
-                        min = 20, max = 40, step = 1,
+                        min = 20,
+                        max = 40,
+                        step = 1,
                         get = function() return addon.db.profile.buttonHeight end,
                         set = function(info, value)
                             local tank = 0
@@ -755,10 +756,12 @@ local function GetOptions()
                             for i, frame in ipairs(selectedPlayerFrames) do
                                 if frame.role == "TANK" then
                                     tank = tank + 1
-                                    frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0, tank * addon.db.profile.buttonHeight)
+                                    frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0,
+                                        tank * addon.db.profile.buttonHeight)
                                 else
                                     local dpsCheck = i - tank
-                                    frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0, dpsCheck * -addon.db.profile.buttonHeight)
+                                    frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0,
+                                        dpsCheck * -addon.db.profile.buttonHeight)
                                 end
                             end
                         end,
@@ -774,10 +777,11 @@ local function GetOptions()
                         type = 'range',
                         name = 'Icon Size',
                         desc = 'Set icon size',
-                        min = 20, max = 40, step = 1,
+                        min = 20,
+                        max = 40,
+                        step = 1,
                         get = function() return addon.db.profile.spellIconSize end,
                         set = function(info, value)
-
                             addon.db.profile.spellIconSize = value
 
                             for k, v in pairs(selectedPlayerFrames) do
@@ -789,7 +793,6 @@ local function GetOptions()
                                     end
                                 end
                             end
-
                         end,
                         order = 16,
                     },
@@ -797,10 +800,11 @@ local function GetOptions()
                         type = 'range',
                         name = 'Timer Text Size',
                         desc = 'Set the size of the text in the icon',
-                        min = 12, max = 20, step = 1,
+                        min = 12,
+                        max = 20,
+                        step = 1,
                         get = function() return addon.db.profile.spellIconTextSize end,
                         set = function(info, value)
-
                             addon.db.profile.spellIconTextSize = value
 
                             for k, v in pairs(selectedPlayerFrames) do
@@ -812,7 +816,6 @@ local function GetOptions()
                                     end
                                 end
                             end
-
                         end,
                         order = 16,
                     },
@@ -827,8 +830,9 @@ local function GetOptions()
                         type = 'toggle',
                         name = "UnLock Header",
                         desc = " ",
-                        get = function() return
-                            addon.db.profile.headerunlock
+                        get = function()
+                            return
+                                addon.db.profile.headerunlock
                         end,
                         set = function(info, value)
                             addon.db.profile.headerunlock = value
@@ -839,8 +843,9 @@ local function GetOptions()
                         type = 'toggle',
                         name = "Hide Frame",
                         desc = " ",
-                        get = function() return
-                            selectedPlayerFrameContainer:IsShown()
+                        get = function()
+                            return
+                                selectedPlayerFrameContainer:IsShown()
                         end,
                         set = function(info, value)
                             HideAllSubFrames()
@@ -856,8 +861,9 @@ local function GetOptions()
                         type = 'toggle',
                         name = "Prescience Bar",
                         desc = "When enabled for Prescience, the dynamic bar is shown; when disabled, it is hidden.",
-                        get = function() return
-                            addon.db.profile.prescienceBarEnable
+                        get = function()
+                            return
+                                addon.db.profile.prescienceBarEnable
                         end,
                         set = function(info, value)
                             addon.db.profile.prescienceBarEnable = value
@@ -881,8 +887,9 @@ local function GetOptions()
                         type = 'toggle',
                         name = "Ebon Might Progress Bar",
                         desc = "When enabled for Ebon Might, the dynamic bar is shown; when disabled, it is hidden.",
-                        get = function() return
-                            addon.db.profile.ebonmightProgressBarEnable
+                        get = function()
+                            return
+                                addon.db.profile.ebonmightProgressBarEnable
                         end,
                         set = function(info, value)
                             addon.db.profile.ebonmightProgressBarEnable = value
@@ -1136,7 +1143,6 @@ local function GetOptions()
                         set = function(_, state)
                             local spellId = tonumber(state)
                             SpellListAdd(spellId)
-
                         end,
                     },
                     buffList = {
@@ -1173,7 +1179,7 @@ local function GetOptions()
     }
 
     for k, v in pairs(GetClasses()) do
-        EvokerAugOptions.args.customSpells.args.buffList.args[v.name..""..k] = {
+        EvokerAugOptions.args.customSpells.args.buffList.args[v.name .. "" .. k] = {
             order = orderNumber,
             type = 'toggle',
             name = v.name,
@@ -1199,27 +1205,29 @@ local function GetOptions()
 end
 
 function addon:OnInitialize()
-    self.db = LibStub('AceDB-3.0'):New(addonName.."DB", self.DefaultProfile, true)
+    self.db = LibStub('AceDB-3.0'):New(addonName .. "DB", self.DefaultProfile, true)
     self.db.RegisterCallback(self, "OnProfileReset", "Reconfigure")
-	self:RegisterChatCommand("aug", function(cmd)
-		addon:OpenOptions(strsplit(' ', cmd or ""))
-	end, true)
+    self:RegisterChatCommand("aug", function(cmd)
+        addon:OpenOptions(strsplit(' ', cmd or ""))
+    end, true)
     createMiniMapIcon()
-
 end
 
-function addon:OnEnable()-- PLAYER_LOGIN
-
+function addon:OnEnable() -- PLAYER_LOGIN
     local lib = LibStub("LibSharedMedia-3.0")
     lib:Register(lib.MediaType.STATUSBAR, "EvokerAug", [[Interface\AddOns\EvokerAug\Media\bar]])
 
-    selectedPlayerFrameContainer = CreateFrame("Frame", "EvokerAug", UIParent, BackdropTemplateMixin and "BackdropTemplate")
-    selectedPlayerFrameContainer:SetPoint(self.db.profile.positions.point, self.db.profile.positions.xOffset, self.db.profile.positions.yOffset)
+    selectedPlayerFrameContainer = CreateFrame("Frame", "EvokerAug", UIParent,
+        BackdropTemplateMixin and "BackdropTemplate")
+    selectedPlayerFrameContainer:SetPoint(self.db.profile.positions.point, self.db.profile.positions.xOffset,
+        self.db.profile.positions.yOffset)
     selectedPlayerFrameContainer:SetSize(200, 20)
     selectedPlayerFrameContainer:SetMovable(true)
     selectedPlayerFrameContainer:EnableMouse(true)
     selectedPlayerFrameContainer:RegisterForDrag("LeftButton")
     selectedPlayerFrameContainer:RegisterEvent("GROUP_ROSTER_UPDATE")
+    selectedPlayerFrameContainer:RegisterEvent("PLAYER_REGEN_ENABLED")
+    selectedPlayerFrameContainer:RegisterEvent("PLAYER_REGEN_DISABLED")
 
     selectedPlayerFrameContainer:SetScript("OnDragStart", function(sel)
         if self.db.profile.headerunlock then
@@ -1229,7 +1237,7 @@ function addon:OnEnable()-- PLAYER_LOGIN
 
     selectedPlayerFrameContainer:SetScript("OnDragStop", function(sel)
         sel:StopMovingOrSizing()
-        local x,_,_,l, p = selectedPlayerFrameContainer:GetPoint()
+        local x, _, _, l, p = selectedPlayerFrameContainer:GetPoint()
         self.db.profile.positions.point = x
         self.db.profile.positions.xOffset = l
         self.db.profile.positions.yOffset = p
@@ -1238,6 +1246,15 @@ function addon:OnEnable()-- PLAYER_LOGIN
     selectedPlayerFrameContainer:SetScript("OnEvent", function(self, event, unit)
         if event == "GROUP_ROSTER_UPDATE" then
             GroupUpdate()
+        elseif event == "PLAYER_REGEN_DISABLED" then
+            combatLockdown = true
+        elseif event == "PLAYER_REGEN_ENABLED" then
+            combatLockdown = false
+            if isCombatButton then
+                addonNameText:SetText(addonName)
+                isCombatButton = false
+                FrameAutoFill()
+            end
         end
     end)
 
@@ -1259,7 +1276,7 @@ function addon:OnEnable()-- PLAYER_LOGIN
     addonNameTexture:SetTexture("Interface\\Addons\\EvokerAug\\Media\\bar")
     addonNameTexture:SetVertexColor(0.24, 0.24, 0.24, 1.0)
 
-    local addonNameText = selectedPlayerFrameContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    addonNameText = selectedPlayerFrameContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     addonNameText:SetPoint("CENTER", selectedPlayerFrameContainer, "CENTER", 0, 0)
     addonNameText:SetText(addonName)
     addonNameText:SetJustifyH("CENTER")
@@ -1282,28 +1299,24 @@ function addon:OnEnable()-- PLAYER_LOGIN
     if addon.db.profile.ebonmightProgressBarEnable then
         CreateProgressBar()
     end
-
-
-
-
 end
 
 local function copytable(dst, src)
-	wipe(dst)
-	for k, v in pairs(src) do
-		if type(v) == "table" then
-			if type(dst[k]) ~= "table" then
-				dst[k] = {}
-			end
-			copytable(dst[k], v)
-		else
-			dst[k] = v
-		end
-	end
+    wipe(dst)
+    for k, v in pairs(src) do
+        if type(v) == "table" then
+            if type(dst[k]) ~= "table" then
+                dst[k] = {}
+            end
+            copytable(dst[k], v)
+        else
+            dst[k] = v
+        end
+    end
 end
 
 function addon:Reconfigure()
-	copytable(self.db.profile, self.DefaultProfile.profile)
+    copytable(self.db.profile, self.DefaultProfile.profile)
     for i, spell in ipairs(spell_list["EVOKER"]["AUGMENTATION"]) do
         self.db.profile.charSpell[spell.spellID] = spell.name
     end
@@ -1322,8 +1335,8 @@ function addon:Reconfigure()
     checkboxStates = {}
     selectedPlayerFrames = {}
     selectedPlayerFrameContainer:ClearAllPoints()
-    selectedPlayerFrameContainer:SetPoint(self.db.profile.positions.point, self.db.profile.positions.xOffset, self.db.profile.positions.yOffset)
-
+    selectedPlayerFrameContainer:SetPoint(self.db.profile.positions.point, self.db.profile.positions.xOffset,
+        self.db.profile.positions.yOffset)
 end
 
 function GetHomePartyInfo()
@@ -1331,11 +1344,11 @@ function GetHomePartyInfo()
     local in_group = IsInGroup() or IsInRaid()
     if in_group then
         for i = 1, GetNumGroupMembers() do
-            local unit =    (IsInRaid() and "raid" .. i) or (IsInGroup() and "party" .. i) or "player"
+            local unit = (IsInRaid() and "raid" .. i) or (IsInGroup() and "party" .. i) or "player"
             local fullName, class = UnitName(unit), UnitClass(unit)
             if fullName == nil then
                 unit = "player"
-                fullName, class =  UnitName(unit), UnitClass(unit)
+                fullName, class = UnitName(unit), UnitClass(unit)
             end
             local _, _, _, _, combatRole = GetSpecializationInfo(GetSpecialization(unit) or 0)
             if not combatRole then
@@ -1344,14 +1357,16 @@ function GetHomePartyInfo()
             local name = GetCharacterName(fullName)
 
             if name and class and combatRole then
-                table.insert(partyMembers, {name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole, unit = i})-- Sınıfı da tabloya ekliyoruz
+                table.insert(partyMembers,
+                    { name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole, unit = i })                      -- Sınıfı da tabloya ekliyoruz
             end
         end
     else
         local name, class = UnitName("player"), UnitClass("player")
         local specializationIndex = GetSpecialization() or 0
         local _, _, _, _, combatRole, _ = GetSpecializationInfo(specializationIndex)
-        table.insert(partyMembers, {name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole, unit = 1})
+        table.insert(partyMembers,
+            { name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole, unit = 1 })
     end
 
     return partyMembers
@@ -1417,20 +1432,19 @@ function RightMenu()
         {
             text = 'Setting panel',
             notCheckable = true,
-            func = function()addon:OpenOptions() end,
+            func = function() addon:OpenOptions() end,
         },
     }
-    EasyMenu(menu, optionsDropDown, "cursor", 0, 0, "MENU")
-
+    Menu:EasyMenu(menu, optionsDropDown, "cursor", 0, 0, "MENU")
 end
 
 LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, GetOptions)
 function addon:OpenOptions(...)
     AceConfigDialog:SetDefaultSize(addonName, 460, 750)
-	if select('#', ...) > 0 then
-		AceConfigDialog:Open(addonName)
-		AceConfigDialog:SelectGroup(addonName, ...)
-	elseif not AceConfigDialog:Close(addonName) then
-		AceConfigDialog:Open(addonName)
-	end
+    if select('#', ...) > 0 then
+        AceConfigDialog:Open(addonName)
+        AceConfigDialog:SelectGroup(addonName, ...)
+    elseif not AceConfigDialog:Close(addonName) then
+        AceConfigDialog:Open(addonName)
+    end
 end
