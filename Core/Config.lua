@@ -59,13 +59,21 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.10",
+    ["version"] = "1.0.12",
     ["changelog"] = [=[
+v1.0.12
+    - Fixed the problem of the buff icon on the tank not being deleted
+
+v1.0.11
+    - Discord information update
+
 v1.0.10
     - Fixed the problem of menu not opening
     - Buff not being deleted issue fixed
+
 v1.0.9
     - TWW Update
+
 v1.0.8
     - Frame overlapping problem with Ebon Might buff progress bar has been resolved
     - If the Prescience Bar is active, the bar will not appear full unless there is a buff on it.

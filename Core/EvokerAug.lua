@@ -200,7 +200,7 @@ local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon, startTi
     playerFrame["buff"][auraInstanceID .. "Text"].timestamp = timestamp
     playerFrame["buff"][auraInstanceID .. "Text"].starttimestamp = startTimer
     playerFrame["buff"][auraInstanceID .. "Text"].ticker = C_Timer.NewTicker(1, function()
-        if playerFrame["buff"] == nil and playerFrame["buff"][auraInstanceID .. "Text"] then
+        if playerFrame["buff"] == nil then
             return
         end
         local duration = playerFrame["buff"][auraInstanceID .. "Text"].timestamp - GetTime()
@@ -226,10 +226,6 @@ local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon, startTi
         else
             playerFrame["buff"][auraInstanceID .. "Text"]:SetText(nil)
         end
-
-
-
-
     end)
     playerFrame["buff"].xOffset = playerFrame["buff"].xOffset + addon.db.profile.buttonHeight
 end
@@ -357,24 +353,32 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
     selectedPlayerFrames[frameIndex]:RegisterUnitEvent("UNIT_AURA")
     selectedPlayerFrames[frameIndex]:SetScript("OnEvent", function(self, event, unit, info)
         if event == "UNIT_AURA" then
-            if info.addedAuras and selectedPlayerFrames[frameIndex] and selectedPlayerFrames[frameIndex].unit == unit then
-                for _, v in pairs(info.addedAuras) do
+            if info == nil then
+                return
+            end
+
+            if info.addedAuras and #info.addedAuras > 0 and selectedPlayerFrames[frameIndex] and selectedPlayerFrames[frameIndex].unit == unit then
+                for _, v in ipairs(info.addedAuras) do
                     if addon.db.profile.buffList[v.spellId] then
                         if v.expirationTime > 0 and selectedPlayerFrames[frameIndex] then
-                            AddBuffIcon(selectedPlayerFrames[frameIndex], v.auraInstanceID, v.expirationTime, v.icon,
-                                v.duration)
+                            AddBuffIcon(selectedPlayerFrames[frameIndex], v.auraInstanceID, v.expirationTime, v.icon, v.duration)
                         end
                     end
                 end
-            elseif info.updatedAuraInstanceIDs and selectedPlayerFrames[frameIndex] and selectedPlayerFrames[frameIndex].unit == unit then
-                for _, v in pairs(info.updatedAuraInstanceIDs) do
+            end
+            if info.updatedAuraInstanceIDs and #info.updatedAuraInstanceIDs > 0 and selectedPlayerFrames[frameIndex] and selectedPlayerFrames[frameIndex].unit == unit then
+                for _, v in ipairs(info.updatedAuraInstanceIDs) do
                     local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, v)
                     if aura and addon.db.profile.buffList[aura.spellId] then
                         if aura.expirationTime > 0 then
-                            AddBuffIcon(selectedPlayerFrames[frameIndex], aura.auraInstanceID, aura.expirationTime,
-                                aura.icon, aura.duration)
+                            AddBuffIcon(selectedPlayerFrames[frameIndex], aura.auraInstanceID, aura.expirationTime, aura.icon, aura.duration)
                         end
                     end
+                end
+            end
+            if info.removedAuraInstanceIDs and #info.removedAuraInstanceIDs > 0 and selectedPlayerFrames[frameIndex] then
+                for _, instance in ipairs(info.removedAuraInstanceIDs) do
+                    RemoveBuffIcon(selectedPlayerFrames[frameIndex], instance)
                 end
             end
         end
