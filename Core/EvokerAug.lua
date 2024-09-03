@@ -635,7 +635,7 @@ local function GetOptions()
                         type = "description",
                     },
                     discord = {
-                        name = "|cffffff00 Discord |r |cff00ff00 discord.gg/jKGdPTrXQF |r",
+                        name = "|cffffff00 Discord |r |cff00ff00 https://discord.gg/ypmd86Ng |r",
                         order = 3,
                         type = "description",
                     },
@@ -645,7 +645,7 @@ local function GetOptions()
                         order = 4,
                         func = function()
                             local editBox = ChatFrame1EditBox
-                            editBox:SetText("discord.gg/jKGdPTrXQF")
+                            editBox:SetText("discord.gg/ypmd86Ng")
                             editBox:HighlightText()
                             editBox:SetFocus()
                         end,
