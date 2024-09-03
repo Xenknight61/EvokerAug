@@ -20,4 +20,4 @@ We are always interested in hearing from you:
 
 Report issues on GitHub
 
-Contact us on [Discord](https://discord.gg/ypmd86Ng)
+Contact us on [Discord](https://discord.gg/D9jb6zwn3j)
