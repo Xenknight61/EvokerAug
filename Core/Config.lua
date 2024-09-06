@@ -20,6 +20,7 @@ addon.DefaultProfile = {
         backgroundTextTexture = "Interface\\Addons\\EvokerAug\\Media\\bar",
         backgroundTextTexture2 = "EvokerAug",
         headerunlock = false,
+        autoFrameFill = true,
         sortByClass = false,
         sortType = "NAME",
         charSpell = {},
@@ -59,8 +60,13 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.12",
+    ["version"] = "1.0.13",
     ["changelog"] = [=[
+v1.0.13
+    - Discord button unresponsive issue resolved
+    - Frames will be added automatically when you enter the dungeons (optional, you can turn it off and on)
+    - If the spec is not aug it will be closed automatically
+
 v1.0.12
     - Fixed the problem of the buff icon on the tank not being deleted
 

@@ -5,8 +5,7 @@ local addon = LibStub("AceAddon-3.0"):GetAddon(addonName)
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceConfigRegistry = LibStub("AceConfigRegistry-3.0")
 local icon = LibStub("LibDBIcon-1.0")
-local Menu = LibStub("LibUIDropDownMenu-4.0")
-local GetAddOnEnableState = C_AddOns.GetAddOnEnableState or function(n, c) return GetAddOnEnableState(c, n) end  -- Deprecated in 10.2.0
+local LibMenu = LibStub("LibUIDropDownMenu-4.0")
 local EvokerAugOptions = {}
 local checkboxStates = {}
 local selectedPlayerFrames = {}
@@ -16,6 +15,7 @@ local progressBar
 local addonNameText
 local combatLockdown = false
 local isCombatButton = false
+local discordLinkDialog = "EvokerAUG_General_Settings_Discord_Dialog"
 -- Map Icon ---
 
 ---@diagnostic disable-next-line: missing-fields
@@ -95,12 +95,12 @@ function CreateProgressBar()
     if addon.db.profile.ebonmightProgressBarEnable then
         if not progressBar then
             progressBar = CreateFrame("StatusBar", "MyProgressBar", UIParent)
-            progressBar:SetSize(200, 20)                                                  -- Boyutları ayarlayın
-            progressBar:SetPoint("CENTER", selectedPlayerFrameContainer, "CENTER", 0, 20) -- Konumu ayarlayın
-            progressBar:SetMinMaxValues(0, 100)                                           -- Minimum ve maksimum değerleri ayarlayın
-            progressBar:SetValue(0)                                                       -- Mevcut değeri ayarlayın
-            progressBar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")    -- Progress barın görünümü
-            progressBar:SetStatusBarColor(0, 1, 0)                                        -- Progress bar rengi (RGB)
+            progressBar:SetSize(200, 20)
+            progressBar:SetPoint("CENTER", selectedPlayerFrameContainer, "CENTER", 0, 20)
+            progressBar:SetMinMaxValues(0, 100)
+            progressBar:SetValue(0)
+            progressBar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
+            progressBar:SetStatusBarColor(0, 1, 0)
 
             local text = progressBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             text:SetPoint("CENTER", progressBar, "CENTER")
@@ -645,13 +645,11 @@ local function GetOptions()
                     },
                     discordcopy = {
                         type = "execute",
-                        name = "Copy Discord Link",
+                        name = "Join the Discord",
                         order = 4,
                         func = function()
-                            local editBox = ChatFrame1EditBox
-                            editBox:SetText("discord.gg/D9jb6zwn3j")
-                            editBox:HighlightText()
-                            editBox:SetFocus()
+                            StaticPopup_Show(discordLinkDialog)
+                            addon:OpenOptions()
                         end,
                     },
                     pd2 = {
@@ -848,11 +846,30 @@ local function GetOptions()
                         name = "Hide Frame",
                         desc = " ",
                         get = function()
-                            return
-                                selectedPlayerFrameContainer:IsShown()
+                            if not selectedPlayerFrameContainer then
+                                return false
+                            end
+                            return selectedPlayerFrameContainer:IsShown()
                         end,
                         set = function(info, value)
                             HideAllSubFrames()
+                        end,
+                    },
+                    autoFrame = {
+                        order = 20,
+                        type = 'toggle',
+                        name = "Auto Frame Fill",
+                        desc = "When you enter the dungeon, it will automatically fill the frame and delete it when you exit.",
+                        get = function()
+                            return addon.db.profile.autoFrameFill
+                        end,
+                        set = function(info, value)
+                            if value then
+                                selectedPlayerFrameContainer:RegisterEvent("PLAYER_ENTERING_WORLD")
+                            else
+                                selectedPlayerFrameContainer:UnregisterEvent("PLAYER_ENTERING_WORLD")
+                            end
+                            addon.db.profile.autoFrameFill = value
                         end,
                     },
                     h5 = {
@@ -1169,7 +1186,8 @@ local function GetOptions()
                         desc = "If you have OmniCD installed, you can see the cooldowns of the spells you have added.",
                         get = function() return addon.db.profile.omniCDSupport end,
                         set = function(_, value)
-                            if GetAddOnEnableState(UnitName('player'), 2) then -- C_AddOns_GetAddOnEnableState("OmniCD", UnitName('player'))  == 2
+                            local state = C_AddOns.GetAddOnEnableState("OmniCD", UnitName('player'))
+                            if state == 2 then
                                 addon.db.profile.omniCDSupport = value
                                 C_UI.Reload()
                             end
@@ -1179,7 +1197,6 @@ local function GetOptions()
             },
             profiles = profiles,
         },
-
     }
 
     for k, v in pairs(GetClasses()) do
@@ -1215,9 +1232,39 @@ function addon:OnInitialize()
         addon:OpenOptions(strsplit(' ', cmd or ""))
     end, true)
     createMiniMapIcon()
+    
+    StaticPopupDialogs[discordLinkDialog] = {
+        text = "CTRL+C to copy",
+        button1 = "Done",
+        hasEditBox = true,
+        OnShow = function(dialog)
+            local function HidePopup()
+                dialog:Hide();
+            end
+            dialog.editBox:SetScript("OnEscapePressed", HidePopup)
+            dialog.editBox:SetScript("OnKeyUp", function(_, key)
+                if IsControlKeyDown() and key == "C"then
+                    HidePopup()
+                end
+            end)
+            dialog.editBox:SetText("https://discord.gg/D9jb6zwn3j")
+            dialog.editBox:SetFocus()
+            dialog.editBox:HighlightText()
+        end,
+        OnHide = function() addon:OpenOptions() end,
+        editBoxWidth = 230,
+        timeout = 0,
+        hideOnEscape = true,
+        whileDead = true,
+    }
 end
 
 function addon:OnEnable() -- PLAYER_LOGIN
+    local class = select(2, UnitClass("player"))
+    if class ~= "EVOKER" then
+        return
+    end
+
     local lib = LibStub("LibSharedMedia-3.0")
     lib:Register(lib.MediaType.STATUSBAR, "EvokerAug", [[Interface\AddOns\EvokerAug\Media\bar]])
 
@@ -1232,6 +1279,21 @@ function addon:OnEnable() -- PLAYER_LOGIN
     selectedPlayerFrameContainer:RegisterEvent("GROUP_ROSTER_UPDATE")
     selectedPlayerFrameContainer:RegisterEvent("PLAYER_REGEN_ENABLED")
     selectedPlayerFrameContainer:RegisterEvent("PLAYER_REGEN_DISABLED")
+    selectedPlayerFrameContainer:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+    if addon.db.profile.autoFrameFill then
+        selectedPlayerFrameContainer:RegisterEvent("PLAYER_ENTERING_WORLD")
+    end
+
+    local addonNameTexture = selectedPlayerFrameContainer:CreateTexture(nil, "OVERLAY")
+    addonNameTexture:SetAllPoints()
+    addonNameTexture:SetTexture("Interface\\Addons\\EvokerAug\\Media\\bar")
+    addonNameTexture:SetVertexColor(0.24, 0.24, 0.24, 1.0)
+
+    addonNameText = selectedPlayerFrameContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    addonNameText:SetPoint("CENTER", selectedPlayerFrameContainer, "CENTER", 0, 0)
+    addonNameText:SetText(addonName)
+    addonNameText:SetJustifyH("CENTER")
+    addonNameText:SetJustifyV("MIDDLE")
 
     selectedPlayerFrameContainer:SetScript("OnDragStart", function(sel)
         if self.db.profile.headerunlock then
@@ -1259,6 +1321,48 @@ function addon:OnEnable() -- PLAYER_LOGIN
                 isCombatButton = false
                 FrameAutoFill()
             end
+        elseif event == "PLAYER_ENTERING_WORLD" and addon.db.profile.autoFrameFill then
+            local _, instanceType = IsInInstance()
+            if instanceType == "party" then
+                C_Timer.After(4.5, function()
+                    local size = GetNumGroupMembers()
+                    if size > 0 then
+                        FrameAutoFill()
+                    end
+                end)
+            elseif instanceType == "none" then
+                C_Timer.After(4.5, function()
+                    for i, frame in pairs(checkboxStates) do
+                        print(i)
+                        DeleteSelectedPlayerFrame(i)
+                    end
+                end)
+            end
+        elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
+            print("1")
+            if unit == "player" then
+                print("12")
+                local currentSpec = GetSpecialization()
+                if currentSpec then
+                    print("123")
+                    if currentSpec ~= 3 then
+                        selectedPlayerFrameContainer:Hide()
+                        addonNameTexture:Hide()
+                        addonNameText:Hide()
+                        selectedPlayerFrameContainer:SetScript("OnUpdate", nil)
+                        if progressBar then
+                            progressBar:Hide()
+                        end
+                    else
+                        selectedPlayerFrameContainer:Show()
+                        addonNameTexture:Show()
+                        addonNameText:Show()
+                        if addon.db.profile.ebonmightProgressBarEnable then
+                            CreateProgressBar()
+                        end
+                    end
+                end
+            end
         end
     end)
 
@@ -1274,18 +1378,6 @@ function addon:OnEnable() -- PLAYER_LOGIN
         end
     end)
 
-
-    local addonNameTexture = selectedPlayerFrameContainer:CreateTexture(nil, "OVERLAY")
-    addonNameTexture:SetAllPoints()
-    addonNameTexture:SetTexture("Interface\\Addons\\EvokerAug\\Media\\bar")
-    addonNameTexture:SetVertexColor(0.24, 0.24, 0.24, 1.0)
-
-    addonNameText = selectedPlayerFrameContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    addonNameText:SetPoint("CENTER", selectedPlayerFrameContainer, "CENTER", 0, 0)
-    addonNameText:SetText(addonName)
-    addonNameText:SetJustifyH("CENTER")
-    addonNameText:SetJustifyV("MIDDLE")
-
     for i, spell in ipairs(spell_list["EVOKER"]["AUGMENTATION"]) do
         self.db.profile.charSpell[spell.spellID] = spell.name
     end
@@ -1299,6 +1391,16 @@ function addon:OnEnable() -- PLAYER_LOGIN
 
 
     -----------------------------
+    ---
+    local currentSpec = GetSpecialization()
+    if currentSpec then
+        if currentSpec ~= 3 then
+            selectedPlayerFrameContainer:Hide()
+            addonNameTexture:Hide()
+            addonNameText:Hide()
+            return
+        end
+    end
 
     if addon.db.profile.ebonmightProgressBarEnable then
         CreateProgressBar()
@@ -1327,7 +1429,7 @@ function addon:Reconfigure()
 
     for i, frame in ipairs(selectedPlayerFrames) do
         if not string.match(i, "buff$") then
-            playerIndex = i
+            local playerIndex = i
             selectedPlayerFrames[playerIndex]:Hide()
             selectedPlayerFrames[playerIndex]:ClearAllPoints()
             selectedPlayerFrames[playerIndex]:SetParent(nil)
@@ -1354,15 +1456,13 @@ function GetHomePartyInfo()
                 unit = "player"
                 fullName, class = UnitName(unit), UnitClass(unit)
             end
-            local _, _, _, _, combatRole = GetSpecializationInfo(GetSpecialization(unit) or 0)
-            if not combatRole then
-                combatRole = UnitGroupRolesAssigned(unit)
-            end
+            local combatRole = UnitGroupRolesAssigned(unit)
             local name = GetCharacterName(fullName)
-
+            if combatRole == "DAMAGER" then
+                combatRole = "DPS"
+            end
             if name and class and combatRole then
-                table.insert(partyMembers,
-                    { name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole, unit = i })                      -- Sınıfı da tabloya ekliyoruz
+                table.insert(partyMembers, { name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole, unit = i })
             end
         end
     else
@@ -1377,7 +1477,7 @@ function GetHomePartyInfo()
 end
 
 function RightMenu()
-    local optionsDropDown = CreateFrame("frame", "RightMenuDown", nil, "UIDropDownMenuTemplate")
+    local optionsDropDown = LibMenu:Create_UIDropDownMenu("EvokerAugDownMenu", UIParent)
     local PartyList = {}
     local partyMembers = GetHomePartyInfo()
 
@@ -1389,6 +1489,7 @@ function RightMenu()
                 if checked then
                     DeleteSelectedPlayerFrame(member.name)
                 else
+                    local unit = nil
                     if member.name == UnitName("player") then
                         unit = "player"
                     else
@@ -1439,7 +1540,7 @@ function RightMenu()
             func = function() addon:OpenOptions() end,
         },
     }
-    Menu:EasyMenu(menu, optionsDropDown, "cursor", 0, 0, "MENU")
+    LibMenu:EasyMenu(menu, optionsDropDown, "cursor", 0, 0, "MENU")
 end
 
 LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, GetOptions)
@@ -1452,3 +1553,4 @@ function addon:OpenOptions(...)
         AceConfigDialog:Open(addonName)
     end
 end
+
