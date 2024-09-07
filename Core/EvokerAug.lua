@@ -26,9 +26,13 @@ local miniButton = LibStub("LibDataBroker-1.1"):NewDataObject(addonName,
         icon = "Interface\\AddOns\\EvokerAug\\Media\\augevoker-logo",
         OnClick = function(self, btn)
             if btn == "LeftButton" then
-                addon:OpenOptions()
+                if not combatLockdown then
+                    addon:OpenOptions()
+                end
             elseif btn == "RightButton" then
-                HideAllSubFrames()
+                if not combatLockdown then
+                    HideAllSubFrames()
+                end
             end
         end,
         OnTooltipShow = function(tooltip)
@@ -69,7 +73,7 @@ local sortTypes = {
 
 -- Minimap Icon
 
-local function HideAllSubFrames()
+function HideAllSubFrames()
     if selectedPlayerFrameContainer:IsShown() then
         selectedPlayerFrameContainer:Hide()
     else
@@ -1333,18 +1337,14 @@ function addon:OnEnable() -- PLAYER_LOGIN
             elseif instanceType == "none" then
                 C_Timer.After(4.5, function()
                     for i, frame in pairs(checkboxStates) do
-                        print(i)
                         DeleteSelectedPlayerFrame(i)
                     end
                 end)
             end
         elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
-            print("1")
             if unit == "player" then
-                print("12")
                 local currentSpec = GetSpecialization()
                 if currentSpec then
-                    print("123")
                     if currentSpec ~= 3 then
                         selectedPlayerFrameContainer:Hide()
                         addonNameTexture:Hide()
@@ -1545,12 +1545,14 @@ end
 
 LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, GetOptions)
 function addon:OpenOptions(...)
-    AceConfigDialog:SetDefaultSize(addonName, 460, 750)
-    if select('#', ...) > 0 then
-        AceConfigDialog:Open(addonName)
-        AceConfigDialog:SelectGroup(addonName, ...)
-    elseif not AceConfigDialog:Close(addonName) then
-        AceConfigDialog:Open(addonName)
+    if not combatLockdown then
+        AceConfigDialog:SetDefaultSize(addonName, 460, 750)
+        if select('#', ...) > 0 then
+            AceConfigDialog:Open(addonName)
+            AceConfigDialog:SelectGroup(addonName, ...)
+        elseif not AceConfigDialog:Close(addonName) then
+            AceConfigDialog:Open(addonName)
+        end
     end
 end
 

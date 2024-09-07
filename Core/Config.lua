@@ -60,11 +60,14 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.13",
+    ["version"] = "1.0.14",
     ["changelog"] = [=[
+v1.0.14
+    - Prevented menu from opening when bar is clicked during combat
+
 v1.0.13
     - Discord button unresponsive issue resolved
-    - Frames will be added automatically when you enter the dungeons (optional, you can turn it off and on)
+    - Frames will be automatically added when you enter the dungeons and deleted when you exit. (optional, you can turn it on or off)
     - If the spec is not aug it will be closed automatically
 
 v1.0.12
