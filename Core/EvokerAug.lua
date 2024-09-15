@@ -5,7 +5,6 @@ local addon = LibStub("AceAddon-3.0"):GetAddon(addonName)
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceConfigRegistry = LibStub("AceConfigRegistry-3.0")
 local icon = LibStub("LibDBIcon-1.0")
-local LibMenu = LibStub("LibUIDropDownMenu-4.0")
 local EvokerAugOptions = {}
 local checkboxStates = {}
 local selectedPlayerFrames = {}
@@ -42,8 +41,18 @@ local miniButton = LibStub("LibDataBroker-1.1"):NewDataObject(addonName,
             tooltip:AddLine("|cffeda55fLeft Click|r to open settings.", 0.2, 1, 0.2)
             tooltip:AddLine("|cffeda55fRight Click|r to show/hide frame.", 0.2, 1, 0.2)
         end,
-    })
+})
 
+AddonCompartmentFrame:RegisterAddon({
+    text = addonName,
+    icon = "Interface\\AddOns\\EvokerAug\\Media\\augevoker-logo",
+    notCheckable = true,
+    func = function()
+        if not combatLockdown then
+            addon:OpenOptions()
+        end
+    end,
+})
 
 local function sortFramesByName(a, b)
     return a.playerName < b.playerName
@@ -559,12 +568,7 @@ local function GroupUpdate()
             DeleteSelectedPlayerFrame(playerName)
         end
     end
-
-
-    local isMenuOpen = UIDROPDOWNMENU_OPEN_MENU ~= nil
-    if isMenuOpen then
-        RightMenu()
-    end
+    
 end
 
 local function GetClasses()
@@ -834,8 +838,8 @@ local function GetOptions()
                     unlockHeader = {
                         order = 18,
                         type = 'toggle',
-                        name = "UnLock Header",
-                        desc = " ",
+                        name = "UnLock Frame",
+                        desc = "Unlock the frame to move it",
                         get = function()
                             return
                                 addon.db.profile.headerunlock
@@ -848,7 +852,7 @@ local function GetOptions()
                         order = 19,
                         type = 'toggle',
                         name = "Hide Frame",
-                        desc = " ",
+                        desc = "Hide the frame",
                         get = function()
                             if not selectedPlayerFrameContainer then
                                 return false
@@ -1366,15 +1370,11 @@ function addon:OnEnable() -- PLAYER_LOGIN
         end
     end)
 
-    selectedPlayerFrameContainer:SetScript("OnMouseUp", function(_, button)
-        if button == "LeftButton" then
-            addon:OpenOptions()
-        end
-    end)
-
-    selectedPlayerFrameContainer:SetScript("OnMouseDown", function(sel, button)
+    selectedPlayerFrameContainer:SetScript("OnMouseUp", function(sel, button)
         if button == "RightButton" then
-            RightMenu()
+            MenuUtil.CreateContextMenu(UIParent, RightMenu)
+        elseif button == "LeftButton" then
+            addon:OpenOptions()
         end
     end)
 
@@ -1476,8 +1476,8 @@ function GetHomePartyInfo()
     return partyMembers
 end
 
-function RightMenu()
-    local optionsDropDown = LibMenu:Create_UIDropDownMenu("EvokerAugDownMenu", UIParent)
+function RightMenu(owner, MenuDesc)
+    MenuDesc:SetTag("AUGEVOKER_RIGHT_MENU");
     local PartyList = {}
     local partyMembers = GetHomePartyInfo()
 
@@ -1485,8 +1485,8 @@ function RightMenu()
         table.insert(PartyList, {
             text = member.name .. ' (' .. member.role .. ')',
             checked = function() return checkboxStates[member.name] end,
-            func = function(_, arg1, arg2, checked)
-                if checked then
+            func = function(xxxx, arg1, arg2)
+                if checkboxStates[member.name] then
                     DeleteSelectedPlayerFrame(member.name)
                 else
                     local unit = nil
@@ -1497,50 +1497,34 @@ function RightMenu()
                     end
                     CreateSelectedPlayerFrame(member.name, member.class, member.role, unit, member.unit)
                 end
-            end
+            end,
+            index = i,
         })
     end
-    local menu = {
-        {
-            text = addonName,
-            isTitle = true,
-            notCheckable = true,
-        },
-        {
-            text = "Party members",
-            hasArrow = true,
-            notCheckable = true,
-            menuList = PartyList,
-        },
-        {
-            text = 'Auto Fill (M+)',
-            notCheckable = true,
-            func = function()
-                FrameAutoFill()
-            end,
-        },
-        {
-            text = 'Clear Frame',
-            notCheckable = true,
-            func = function()
-                for i, frame in pairs(checkboxStates) do
-                    local playerName = i
-                    DeleteSelectedPlayerFrame(playerName)
-                end
-            end,
-        },
-        {
-            text = 'Setting',
-            isTitle = true,
-            notCheckable = true,
-        },
-        {
-            text = 'Setting panel',
-            notCheckable = true,
-            func = function() addon:OpenOptions() end,
-        },
-    }
-    LibMenu:EasyMenu(menu, optionsDropDown, "cursor", 0, 0, "MENU")
+
+    MenuDesc:CreateTitle(addonName)
+    local party = MenuDesc:CreateButton("Party members")
+    for i, v in ipairs(PartyList) do
+        party:CreateRadio(v.text, v.checked, v.func, v.index)
+    end
+    MenuDesc:CreateButton('Auto Fill (M+)', function() FrameAutoFill() end)
+    MenuDesc:CreateButton('Clear Frame', function()
+        for i, frame in pairs(checkboxStates) do
+            local playerName = i
+            DeleteSelectedPlayerFrame(playerName)
+        end
+    end)
+    MenuDesc:CreateDivider()
+    MenuDesc:CreateTitle('Setting')
+    MenuDesc:CreateButton('Setting panel', function() addon:OpenOptions() end)
+
+    local function IsSelected()
+        return addon.db.profile.headerunlock;
+    end
+    local function SetSelected()
+        addon.db.profile.headerunlock = not addon.db.profile.headerunlock
+    end
+    MenuDesc:CreateCheckbox('Unlock Frame', IsSelected, SetSelected)
 end
 
 LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, GetOptions)
