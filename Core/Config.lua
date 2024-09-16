@@ -60,8 +60,11 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.15",
+    ["version"] = "1.0.16",
     ["changelog"] = [=[
+v1.0.16
+    - LUA error fix
+
 v1.0.15
     - Changed the UI of the drop-down menu
     - Unlock frame option added to drop-down menu

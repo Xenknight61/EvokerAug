@@ -6,7 +6,7 @@
 ## X-Category: Evoker
 ## SavedVariables: EvokerAugDB
 ## OptionalDeps: Ace3, LibDBIcon-1.0, LibSharedMedia-3.0
-## IconTexture: Interface\AddOns\EvokerAug\Config\Media\bar
+## IconTexture: Interface\AddOns\EvokerAug\Media\augevoker-logo
 
 ## X-Curse-Project-ID: 993748
 ## X-WoWI-ID: 26709
