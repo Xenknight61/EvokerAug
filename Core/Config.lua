@@ -54,14 +54,19 @@ addon.DefaultProfile = {
             [395296] = "Ebon Might",
             [395152] = "Ebon Might",
             [369459] = "Source of Magic",
+            [361022] = "Sense Power",
         },
         omniCDSupport = false,
     }
 }
 
 addon.Config = {
-    ["version"] = "1.0.17",
+    ["version"] = "1.0.18",
     ["changelog"] = [=[
+v1.0.18
+    - Sense Power added. If someone has a buff, a glow is added to the frame
+    - If the player is dead, the frame will be greyed out and DEAD will be written next to the name
+
 v1.0.17
     - Fixed the issue where Alt, Shift and Ctrl keys sometimes did not work on the tank
     - Buff related corrections have been made

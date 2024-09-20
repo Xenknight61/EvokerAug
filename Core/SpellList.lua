@@ -12,6 +12,7 @@ spell_list = {
             { ["name"] = "Emerald Blossom", ["iconID"] = 4622457, ["spellID"] = 355913 },
             { ["name"] = "Return", ["iconID"] = 4622472, ["spellID"] = 361227 },
             { ["name"] = "Sourceof Magic", ["iconID"] = 4630412, ["spellID"] = 369459 },
+            { ["name"] = "Sense Power", ["iconID"] = 132160, ["spellID"] = 361022 },
         }
     }
 }
@@ -29,6 +30,7 @@ AllSpellList = {
         [406732] = "Spatial Paradox",
         [374348] = "Renewing Blaze",
         [403631] = "Breath of Eons",
-        [370553] = "Tip the Scales"
+        [370553] = "Tip the Scales",
+        [361022] = "Sense Power"
     },
 }

@@ -15,6 +15,8 @@ local addonNameText
 local combatLockdown = false
 local isCombatButton = false
 local discordLinkDialog = "EvokerAUG_General_Settings_Discord_Dialog"
+local LibCustomGlow = LibStub("LibCustomGlow-1.0")
+local DeadorGhostData = {}
 -- Map Icon ---
 
 ---@diagnostic disable-next-line: missing-fields
@@ -170,6 +172,9 @@ local function RemoveBuffIcon(playerFrame, buffID)
             if playerFrame["buff"][buffID].iconid == 5199639 and addon.db.profile.prescienceBuffSoundName ~= "None" then
                 PlaySoundFile(addon.db.profile.prescienceBuffSoundFile, "Master")
             end
+            if playerFrame["buff"][buffID].glow then
+                LibCustomGlow.PixelGlow_Stop(playerFrame)
+            end
             playerFrame["buff"][buffID .. "Text"].ticker:Cancel()
             playerFrame["buff"][buffID .. "Text"]:Hide()
             playerFrame["buff"][buffID .. "Text"]:ClearAllPoints()
@@ -185,7 +190,7 @@ local function RemoveBuffIcon(playerFrame, buffID)
     end
 end
 
-local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon, startTimer)
+local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon, startTimer, spellID)
     if playerFrame == nil then
         return
     end
@@ -198,6 +203,7 @@ local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon, startTi
     end
     playerFrame["buff"][auraInstanceID] = playerFrame:CreateTexture(nil, "OVERLAY")
     playerFrame["buff"][auraInstanceID].iconid = icon
+    playerFrame["buff"][auraInstanceID].glow = false
     playerFrame["buff"][auraInstanceID]:SetTexture(icon)
     playerFrame["buff"][auraInstanceID]:SetSize(addon.db.profile.spellIconSize, addon.db.profile.spellIconSize)
     playerFrame["buff"][auraInstanceID]:SetPoint("LEFT", playerFrame, "RIGHT", playerFrame["buff"].xOffset, 0)
@@ -240,6 +246,11 @@ local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon, startTi
         end
     end)
     playerFrame["buff"].xOffset = playerFrame["buff"].xOffset + addon.db.profile.buttonHeight
+
+    if spellID == 361022 then
+        playerFrame["buff"][auraInstanceID].glow = true
+        LibCustomGlow.PixelGlow_Start(playerFrame, {0.95, 0.95, 0.32, 1}, 8, 0.25, 10, 3, 0, 0, true, nil)
+    end
 end
 
 local function AddBuffIcons(playerFrame, playerName)
@@ -252,7 +263,7 @@ local function AddBuffIcons(playerFrame, playerName)
         local spellTable = C_UnitAuras.GetAuraDataBySpellName(playerName, v, "HELPFUL")
         if spellTable then
             AddBuffIcon(playerFrame, spellTable.auraInstanceID, spellTable.expirationTime, spellTable.icon,
-                spellTable.duration)
+                spellTable.duration, spellTable.spellId)
         end
     end
 end
@@ -388,11 +399,11 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
     selectedPlayerFrames[frameIndex].texture:SetTexture(addon.db.profile.backgroundTextTexture)
 
 
-    local playerNameText = selectedPlayerFrames[frameIndex]:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    playerNameText:SetPoint("CENTER", selectedPlayerFrames[frameIndex], "CENTER", 0, 0)
-    playerNameText:SetText(playerName)
-    playerNameText:SetJustifyH("CENTER")
-    playerNameText:SetJustifyV("MIDDLE")
+    selectedPlayerFrames[frameIndex].playerNameText = selectedPlayerFrames[frameIndex]:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    selectedPlayerFrames[frameIndex].playerNameText:SetPoint("CENTER", selectedPlayerFrames[frameIndex], "CENTER", 0, 0)
+    selectedPlayerFrames[frameIndex].playerNameText:SetText(playerName)
+    selectedPlayerFrames[frameIndex].playerNameText:SetJustifyH("CENTER")
+    selectedPlayerFrames[frameIndex].playerNameText:SetJustifyV("MIDDLE")
 
     local tankCount = 0
     for i, frame in ipairs(selectedPlayerFrames) do
@@ -1256,6 +1267,7 @@ function addon:OnEnable() -- PLAYER_LOGIN
     selectedPlayerFrameContainer:RegisterEvent("PLAYER_REGEN_ENABLED")
     selectedPlayerFrameContainer:RegisterEvent("PLAYER_REGEN_DISABLED")
     selectedPlayerFrameContainer:RegisterEvent("UNIT_AURA")
+    selectedPlayerFrameContainer:RegisterEvent("UNIT_FLAGS")
     selectedPlayerFrameContainer:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
     if addon.db.profile.autoFrameFill then
         selectedPlayerFrameContainer:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -1345,7 +1357,7 @@ function addon:OnEnable() -- PLAYER_LOGIN
                     for _, v in ipairs(info.addedAuras) do
                         if addon.db.profile.buffList[v.spellId] then
                             if v.expirationTime > 0 and selectedPlayerFrames[frameIndex] then
-                                AddBuffIcon(selectedPlayerFrames[frameIndex], v.auraInstanceID, v.expirationTime, v.icon, v.duration)
+                                AddBuffIcon(selectedPlayerFrames[frameIndex], v.auraInstanceID, v.expirationTime, v.icon, v.duration, v.spellId)
                             end
                         end
                     end
@@ -1355,7 +1367,7 @@ function addon:OnEnable() -- PLAYER_LOGIN
                         local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, v)
                         if aura and addon.db.profile.buffList[aura.spellId] then
                             if aura.expirationTime > 0 then
-                                AddBuffIcon(selectedPlayerFrames[frameIndex], aura.auraInstanceID, aura.expirationTime, aura.icon, aura.duration)
+                                AddBuffIcon(selectedPlayerFrames[frameIndex], aura.auraInstanceID, aura.expirationTime, aura.icon, aura.duration, aura.spellId)
                             end
                         end
                     end
@@ -1365,6 +1377,31 @@ function addon:OnEnable() -- PLAYER_LOGIN
                         RemoveBuffIcon(selectedPlayerFrames[frameIndex], instance)
                     end
                 end
+        elseif event == "UNIT_FLAGS" then
+            if unit ~= "player" then
+                local isDeadOrGhost = UnitIsDeadOrGhost(unit)
+                if isDeadOrGhost then
+                    local frameIndex = GetPlayerFrameIndexByUnit(unit)
+                    if selectedPlayerFrames[frameIndex] then
+                        local frame = selectedPlayerFrames[frameIndex]
+                        DeadorGhostData[unit] = true
+                        frame:SetBackdropColor(0.5, 0.5, 0.5, 0.5)
+                        frame.texture:SetVertexColor(0.5, 0.5, 0.5, 0.5)
+                        frame.playerNameText:SetText(frame.playerName .. " (Dead)")
+                    end
+                elseif DeadorGhostData[unit] then
+                    local frameIndex = GetPlayerFrameIndexByUnit(unit)
+                    if selectedPlayerFrames[frameIndex] then
+                        local frame = selectedPlayerFrames[frameIndex]
+                        local clasxs = frame.class
+                        local classColor = RAID_CLASS_COLORS[clasxs] or { r = 0.5, g = 0.5, b = 0.5 }
+                        frame:SetBackdropColor(classColor.r, classColor.g, classColor.b, 0.9)
+                        frame.texture:SetVertexColor(classColor.r, classColor.g, classColor.b, 0.9)
+                        frame.playerNameText:SetText(frame.playerName)
+                        DeadorGhostData[unit] = nil
+                    end
+                end
+            end
         end
     end)
 
