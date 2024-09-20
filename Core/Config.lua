@@ -60,8 +60,12 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.16",
+    ["version"] = "1.0.17",
     ["changelog"] = [=[
+v1.0.17
+    - Fixed the issue where Alt, Shift and Ctrl keys sometimes did not work on the tank
+    - Buff related corrections have been made
+
 v1.0.16
     - LUA error fix
 

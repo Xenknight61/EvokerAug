@@ -185,7 +185,6 @@ local function RemoveBuffIcon(playerFrame, buffID)
     end
 end
 
-
 local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon, startTimer)
     if playerFrame == nil then
         return
@@ -272,7 +271,6 @@ local function CheckDistance(playerFrame)
     end
 end
 
-
 local function UpdateDistance()
     for _, playerFrame in ipairs(selectedPlayerFrames) do
         CheckDistance(playerFrame)
@@ -283,19 +281,19 @@ local function MacroUpdate(frame)
     if frame.role == "TANK" then
         frame:SetAttribute("spell", addon.db.profile.charSpell[addon.db.profile.tankMacros.LeftSpell]);
         if addon.db.profile.macro.AltClick then
-            frame:SetAttribute("alt-spell", addon.db.profile.charSpell[addon.db.profile.tankMacros.AltSpell]);
+            frame:SetAttribute("alt-spell1", addon.db.profile.charSpell[addon.db.profile.tankMacros.AltSpell]);
         else
-            frame:SetAttribute("alt-spell", nil)
+            frame:SetAttribute("alt-spell1", nil)
         end
         if addon.db.profile.macro.ShiftClick then
-            frame:SetAttribute("shift-spell", addon.db.profile.charSpell[addon.db.profile.tankMacros.ShiftSpell]);
+            frame:SetAttribute("shift-spell1", addon.db.profile.charSpell[addon.db.profile.tankMacros.ShiftSpell]);
         else
-            frame:SetAttribute("shift-spell", nil)
+            frame:SetAttribute("shift-spell1", nil)
         end
         if addon.db.profile.macro.CtrlClick then
-            frame:SetAttribute("ctrl-spell", addon.db.profile.charSpell[addon.db.profile.tankMacros.CtrlSpell]);
+            frame:SetAttribute("ctrl-spell1", addon.db.profile.charSpell[addon.db.profile.tankMacros.CtrlSpell]);
         else
-            frame:SetAttribute("ctrl-spell", nil)
+            frame:SetAttribute("ctrl-spell1", nil)
         end
         if addon.db.profile.macro.RightClick then
             frame:SetAttribute("spell2", addon.db.profile.charSpell[addon.db.profile.tankMacros.RightSpell]);
@@ -360,42 +358,7 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
     selectedPlayerFrames[frameIndex].unit = unitIndex
     selectedPlayerFrames[frameIndex]:RegisterForClicks("AnyDown")
 
-
     AddBuffIcons(selectedPlayerFrames[frameIndex], playerName)
-
-    selectedPlayerFrames[frameIndex]:RegisterUnitEvent("UNIT_AURA")
-    selectedPlayerFrames[frameIndex]:SetScript("OnEvent", function(self, event, unit, info)
-        if event == "UNIT_AURA" then
-            if info == nil then
-                return
-            end
-
-            if info.addedAuras and #info.addedAuras > 0 and selectedPlayerFrames[frameIndex] and selectedPlayerFrames[frameIndex].unit == unit then
-                for _, v in ipairs(info.addedAuras) do
-                    if addon.db.profile.buffList[v.spellId] then
-                        if v.expirationTime > 0 and selectedPlayerFrames[frameIndex] then
-                            AddBuffIcon(selectedPlayerFrames[frameIndex], v.auraInstanceID, v.expirationTime, v.icon, v.duration)
-                        end
-                    end
-                end
-            end
-            if info.updatedAuraInstanceIDs and #info.updatedAuraInstanceIDs > 0 and selectedPlayerFrames[frameIndex] and selectedPlayerFrames[frameIndex].unit == unit then
-                for _, v in ipairs(info.updatedAuraInstanceIDs) do
-                    local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, v)
-                    if aura and addon.db.profile.buffList[aura.spellId] then
-                        if aura.expirationTime > 0 then
-                            AddBuffIcon(selectedPlayerFrames[frameIndex], aura.auraInstanceID, aura.expirationTime, aura.icon, aura.duration)
-                        end
-                    end
-                end
-            end
-            if info.removedAuraInstanceIDs and #info.removedAuraInstanceIDs > 0 and selectedPlayerFrames[frameIndex] then
-                for _, instance in ipairs(info.removedAuraInstanceIDs) do
-                    RemoveBuffIcon(selectedPlayerFrames[frameIndex], instance)
-                end
-            end
-        end
-    end)
 
     selectedPlayerFrames[frameIndex]:SetAttribute('unitName', playerName)
     selectedPlayerFrames[frameIndex]:SetAttribute('unitID', unitIndex)
@@ -413,8 +376,6 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
     selectedPlayerFrames[frameIndex]:SetBackdropColor(classColor.r, classColor.g, classColor.b, 0.9)
     selectedPlayerFrames[frameIndex].texture:SetVertexColor(classColor.r, classColor.g, classColor.b, 0.9)
     CheckDistance(selectedPlayerFrames[frameIndex])
-
-
 
     selectedPlayerFrames[frameIndex].texture:SetPoint('TOP', selectedPlayerFrames[frameIndex], 'TOP')
     selectedPlayerFrames[frameIndex].texture:SetPoint('BOTTOM', selectedPlayerFrames[frameIndex], 'BOTTOM')
@@ -453,26 +414,33 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
     end
 end
 
-local function DeleteSelectedPlayerFrame(playerName)
-    local playerIndex = nil
+local function GetPlayerFrameIndexByUnit(unit)
     for i, frame in ipairs(selectedPlayerFrames) do
-        if frame.playerName == playerName then
-            playerIndex = i
-            break
+        if frame.unit == unit then
+            return i
         end
     end
+    return nil
+end
+
+local function GetPlayerFrameIndexByName(name)
+    for i, frame in ipairs(selectedPlayerFrames) do
+        if frame.playerName == name then
+            return i
+        end
+    end
+    return nil
+end
+
+local function DeleteSelectedPlayerFrame(playerName)
+    local playerIndex = GetPlayerFrameIndexByName(playerName)
     if playerIndex and selectedPlayerFrames[playerIndex] then
         selectedPlayerFrames[playerIndex]:Hide()
         selectedPlayerFrames[playerIndex]:ClearAllPoints()
         selectedPlayerFrames[playerIndex]:SetParent(nil)
-        selectedPlayerFrames[playerIndex]:UnregisterEvent("UNIT_AURA")
         table.remove(selectedPlayerFrames, playerIndex)
-
         checkboxStates[playerName] = false
-
-
         table.sort(selectedPlayerFrames, sortFramesByName)
-
         local tankCount = 0
         for i, frame in ipairs(selectedPlayerFrames) do
             if frame.role == "TANK" then
@@ -1251,7 +1219,7 @@ function addon:OnInitialize()
             end
             dialog.editBox:SetScript("OnEscapePressed", HidePopup)
             dialog.editBox:SetScript("OnKeyUp", function(_, key)
-                if IsControlKeyDown() and key == "C"then
+                if IsControlKeyDown() and key == "C" then
                     HidePopup()
                 end
             end)
@@ -1287,6 +1255,7 @@ function addon:OnEnable() -- PLAYER_LOGIN
     selectedPlayerFrameContainer:RegisterEvent("GROUP_ROSTER_UPDATE")
     selectedPlayerFrameContainer:RegisterEvent("PLAYER_REGEN_ENABLED")
     selectedPlayerFrameContainer:RegisterEvent("PLAYER_REGEN_DISABLED")
+    selectedPlayerFrameContainer:RegisterEvent("UNIT_AURA")
     selectedPlayerFrameContainer:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
     if addon.db.profile.autoFrameFill then
         selectedPlayerFrameContainer:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -1317,7 +1286,7 @@ function addon:OnEnable() -- PLAYER_LOGIN
         self.db.profile.positions.yOffset = p
     end)
 
-    selectedPlayerFrameContainer:SetScript("OnEvent", function(self, event, unit)
+    selectedPlayerFrameContainer:SetScript("OnEvent", function(self, event, unit, info)
         if event == "GROUP_ROSTER_UPDATE" then
             GroupUpdate()
         elseif event == "PLAYER_REGEN_DISABLED" then
@@ -1367,6 +1336,35 @@ function addon:OnEnable() -- PLAYER_LOGIN
                     end
                 end
             end
+        elseif event == "UNIT_AURA" then
+                if info == nil then
+                    return
+                end
+                local frameIndex = GetPlayerFrameIndexByUnit(unit)
+                if info.addedAuras and #info.addedAuras > 0 and selectedPlayerFrames[frameIndex] then
+                    for _, v in ipairs(info.addedAuras) do
+                        if addon.db.profile.buffList[v.spellId] then
+                            if v.expirationTime > 0 and selectedPlayerFrames[frameIndex] then
+                                AddBuffIcon(selectedPlayerFrames[frameIndex], v.auraInstanceID, v.expirationTime, v.icon, v.duration)
+                            end
+                        end
+                    end
+                end
+                if info.updatedAuraInstanceIDs and #info.updatedAuraInstanceIDs > 0 and selectedPlayerFrames[frameIndex] then
+                    for _, v in ipairs(info.updatedAuraInstanceIDs) do
+                        local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, v)
+                        if aura and addon.db.profile.buffList[aura.spellId] then
+                            if aura.expirationTime > 0 then
+                                AddBuffIcon(selectedPlayerFrames[frameIndex], aura.auraInstanceID, aura.expirationTime, aura.icon, aura.duration)
+                            end
+                        end
+                    end
+                end
+                if info.removedAuraInstanceIDs and #info.removedAuraInstanceIDs > 0 and selectedPlayerFrames[frameIndex] then
+                    for _, instance in ipairs(info.removedAuraInstanceIDs) do
+                        RemoveBuffIcon(selectedPlayerFrames[frameIndex], instance)
+                    end
+                end
         end
     end)
 
@@ -1433,7 +1431,6 @@ function addon:Reconfigure()
             selectedPlayerFrames[playerIndex]:Hide()
             selectedPlayerFrames[playerIndex]:ClearAllPoints()
             selectedPlayerFrames[playerIndex]:SetParent(nil)
-            selectedPlayerFrames[playerIndex]:UnregisterEvent("UNIT_AURA")
             table.remove(selectedPlayerFrames, playerIndex)
             break
         end
