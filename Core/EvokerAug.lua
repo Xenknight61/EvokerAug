@@ -43,7 +43,7 @@ local miniButton = LibStub("LibDataBroker-1.1"):NewDataObject(addonName,
             tooltip:AddLine("|cffeda55fLeft Click|r to open settings.", 0.2, 1, 0.2)
             tooltip:AddLine("|cffeda55fRight Click|r to show/hide frame.", 0.2, 1, 0.2)
         end,
-})
+    })
 
 AddonCompartmentFrame:RegisterAddon({
     text = addonName,
@@ -66,7 +66,7 @@ local function sortFramesByName(a, b)
             return false
         end
     end
-    return a.playerName  < b.playerName 
+    return a.playerName < b.playerName
 end
 
 local function sortFramesByClass(a, b)
@@ -269,7 +269,7 @@ local function AddBuffIcon(playerFrame, auraInstanceID, timestamp, icon, startTi
 
     if spellID == 361022 then
         playerFrame["buff"][auraInstanceID].glow = true
-        LibCustomGlow.PixelGlow_Start(playerFrame, {0.95, 0.95, 0.32, 1}, 8, 0.25, 10, 3, 0, 0, true, nil)
+        LibCustomGlow.PixelGlow_Start(playerFrame, { 0.95, 0.95, 0.32, 1 }, 8, 0.25, 10, 3, 0, 0, true, nil)
     end
 end
 
@@ -437,7 +437,8 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
     selectedPlayerFrames[frameIndex].texture:SetTexture(addon.db.profile.backgroundTextTexture)
 
 
-    selectedPlayerFrames[frameIndex].playerNameText = selectedPlayerFrames[frameIndex]:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    selectedPlayerFrames[frameIndex].playerNameText = selectedPlayerFrames[frameIndex]:CreateFontString(nil, "OVERLAY",
+        "GameFontHighlight")
     selectedPlayerFrames[frameIndex].playerNameText:SetPoint("CENTER", selectedPlayerFrames[frameIndex], "CENTER", 0, 0)
     selectedPlayerFrames[frameIndex].playerNameText:SetText(playerName)
     selectedPlayerFrames[frameIndex].playerNameText:SetJustifyH("CENTER")
@@ -492,6 +493,38 @@ local function DeleteSelectedPlayerFrame(playerName)
         if distanceTimer then
             distanceTimer:Cancel()
             distanceTimer = nil
+        end
+    end
+end
+
+local function AddFrameFavorite()
+    --- Favorite Check
+    local in_group = IsInGroup() or IsInRaid()
+    if in_group then
+        for i = 1, GetNumGroupMembers() do
+            local unitID = (IsInRaid() and "raid" .. i) or (IsInGroup() and "party" .. i) or "player"
+            local fullName, realm = UnitName(unitID)
+            if fullName then
+                local class = UnitClass(unitID)
+                if not realm then
+                    realm = GetRealmName()
+                    fullName = fullName .. "-" .. realm
+                end
+                if fullName and class then
+                    local isFav = IsFavorite(fullName)
+                    if isFav then
+                        local combatRole = UnitGroupRolesAssigned(unitID)
+                        local name = GetCharacterName(fullName)
+                        if combatRole == "DAMAGER" then
+                            combatRole = "DPS"
+                        end
+                        if name and class and combatRole and not IsPlayerFrameByName(name) then
+                            class = strupper(string.gsub(class, "%s+", ""))
+                            CreateSelectedPlayerFrame(name, class, combatRole, unitID, unitID)
+                        end
+                    end
+                end
+            end
         end
     end
 end
@@ -569,7 +602,6 @@ local function GroupUpdate()
             DeleteSelectedPlayerFrame(playerName)
         end
     end
-    
 end
 
 local function GetClasses()
@@ -857,7 +889,8 @@ local function GetOptions()
                         order = 20,
                         type = 'toggle',
                         name = "Auto Frame Fill",
-                        desc = "When you enter the dungeon, it will automatically fill the frame and delete it when you exit.",
+                        desc =
+                        "When you enter the dungeon, it will automatically fill the frame and delete it when you exit.",
                         get = function()
                             return addon.db.profile.autoFrameFill
                         end,
@@ -1288,7 +1321,7 @@ function addon:OnInitialize()
         addon:OpenOptions(strsplit(' ', cmd or ""))
     end, true)
     createMiniMapIcon()
-    
+
     StaticPopupDialogs[discordLinkDialog] = {
         text = "CTRL+C to copy",
         button1 = "Done",
@@ -1366,35 +1399,7 @@ function addon:OnEnable() -- PLAYER_LOGIN
         if event == "GROUP_ROSTER_UPDATE" then
             GroupUpdate()
             --- Favorite Check
-            local in_group = IsInGroup() or IsInRaid()
-            if in_group then
-                for i = 1, GetNumGroupMembers() do
-                    local unitID = (IsInRaid() and "raid" .. i) or (IsInGroup() and "party" .. i) or "player"
-                    local fullName, realm = UnitName(unitID)
-                    if fullName then
-                        local class = UnitClass(unitID)
-                        if not realm then
-                            realm = GetRealmName()
-                            fullName = fullName .. "-" .. realm
-                        end
-                        if fullName and class then
-                            local isFav = IsFavorite(fullName)
-                            if isFav then
-                                local combatRole = UnitGroupRolesAssigned(unitID)
-                                local name = GetCharacterName(fullName)
-                                if combatRole == "DAMAGER" then
-                                    combatRole = "DPS"
-                                end
-                                if name and class and combatRole and not IsPlayerFrameByName(name) then
-                                    class = strupper(string.gsub(class, "%s+", ""))
-                                    CreateSelectedPlayerFrame(name, class, combatRole, unitID, unitID)
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-
+            AddFrameFavorite()
         elseif event == "PLAYER_REGEN_DISABLED" then
             combatLockdown = true
         elseif event == "PLAYER_REGEN_ENABLED" then
@@ -1451,34 +1456,36 @@ function addon:OnEnable() -- PLAYER_LOGIN
                 end
             end
         elseif event == "UNIT_AURA" then
-                if info == nil then
-                    return
-                end
-                local frameIndex = GetPlayerFrameIndexByUnit(unit)
-                if info.addedAuras and #info.addedAuras > 0 and selectedPlayerFrames[frameIndex] then
-                    for _, v in ipairs(info.addedAuras) do
-                        if addon.db.profile.buffList[v.spellId] then
-                            if v.expirationTime > 0 and selectedPlayerFrames[frameIndex] then
-                                AddBuffIcon(selectedPlayerFrames[frameIndex], v.auraInstanceID, v.expirationTime, v.icon, v.duration, v.spellId)
-                            end
+            if info == nil then
+                return
+            end
+            local frameIndex = GetPlayerFrameIndexByUnit(unit)
+            if info.addedAuras and #info.addedAuras > 0 and selectedPlayerFrames[frameIndex] then
+                for _, v in ipairs(info.addedAuras) do
+                    if addon.db.profile.buffList[v.spellId] then
+                        if v.expirationTime > 0 and selectedPlayerFrames[frameIndex] then
+                            AddBuffIcon(selectedPlayerFrames[frameIndex], v.auraInstanceID, v.expirationTime, v.icon,
+                                v.duration, v.spellId)
                         end
                     end
                 end
-                if info.updatedAuraInstanceIDs and #info.updatedAuraInstanceIDs > 0 and selectedPlayerFrames[frameIndex] then
-                    for _, v in ipairs(info.updatedAuraInstanceIDs) do
-                        local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, v)
-                        if aura and addon.db.profile.buffList[aura.spellId] then
-                            if aura.expirationTime > 0 then
-                                AddBuffIcon(selectedPlayerFrames[frameIndex], aura.auraInstanceID, aura.expirationTime, aura.icon, aura.duration, aura.spellId)
-                            end
+            end
+            if info.updatedAuraInstanceIDs and #info.updatedAuraInstanceIDs > 0 and selectedPlayerFrames[frameIndex] then
+                for _, v in ipairs(info.updatedAuraInstanceIDs) do
+                    local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, v)
+                    if aura and addon.db.profile.buffList[aura.spellId] then
+                        if aura.expirationTime > 0 then
+                            AddBuffIcon(selectedPlayerFrames[frameIndex], aura.auraInstanceID, aura.expirationTime,
+                                aura.icon, aura.duration, aura.spellId)
                         end
                     end
                 end
-                if info.removedAuraInstanceIDs and #info.removedAuraInstanceIDs > 0 and selectedPlayerFrames[frameIndex] then
-                    for _, instance in ipairs(info.removedAuraInstanceIDs) do
-                        RemoveBuffIcon(selectedPlayerFrames[frameIndex], instance)
-                    end
+            end
+            if info.removedAuraInstanceIDs and #info.removedAuraInstanceIDs > 0 and selectedPlayerFrames[frameIndex] then
+                for _, instance in ipairs(info.removedAuraInstanceIDs) do
+                    RemoveBuffIcon(selectedPlayerFrames[frameIndex], instance)
                 end
+            end
         elseif event == "UNIT_FLAGS" then
             if unit ~= "player" then
                 local isDeadOrGhost = UnitIsDeadOrGhost(unit)
@@ -1540,12 +1547,13 @@ function addon:OnEnable() -- PLAYER_LOGIN
         if currentSpec then
             if currentSpec ~= 3 then
                 HideAllSubFrames()
+            else
+                AddFrameFavorite()
             end
         end
 
         AddItemsWithMenu()
     end
-
 end
 
 local function copytable(dst, src)
@@ -1602,7 +1610,8 @@ function GetHomePartyInfos()
                 combatRole = "DPS"
             end
             if name and class and combatRole then
-                table.insert(partyMembers, { name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole, unit = i })
+                table.insert(partyMembers,
+                    { name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole, unit = i })
             end
         end
     else
