@@ -421,9 +421,9 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
         bgFile = [=[Interface\Tooltips\UI-Tooltip-Background]=],
         insets = { top = -1, left = -1, bottom = -1, right = -1 }
     })
-    local classColor = RAID_CLASS_COLORS[class] or { r = 0.5, g = 0.5, b = 0.5 }
-    selectedPlayerFrames[frameIndex]:SetBackdropColor(classColor.r, classColor.g, classColor.b, 0.9)
-    selectedPlayerFrames[frameIndex].texture:SetVertexColor(classColor.r, classColor.g, classColor.b, 0.9)
+    local classR, classG, classB = GetClassColor(class)
+    selectedPlayerFrames[frameIndex]:SetBackdropColor(classR, classG, classB, 0.9)
+    selectedPlayerFrames[frameIndex].texture:SetVertexColor(classR, classG, classB, 0.9)
     CheckDistance(selectedPlayerFrames[frameIndex])
 
     selectedPlayerFrames[frameIndex].texture:SetPoint('TOP', selectedPlayerFrames[frameIndex], 'TOP')
@@ -1503,9 +1503,9 @@ function addon:OnEnable() -- PLAYER_LOGIN
                     if selectedPlayerFrames[frameIndex] then
                         local frame = selectedPlayerFrames[frameIndex]
                         local clasxs = frame.class
-                        local classColor = RAID_CLASS_COLORS[clasxs] or { r = 0.5, g = 0.5, b = 0.5 }
-                        frame:SetBackdropColor(classColor.r, classColor.g, classColor.b, 0.9)
-                        frame.texture:SetVertexColor(classColor.r, classColor.g, classColor.b, 0.9)
+                        local classR, classG, classB = GetClassColor(clasxs)
+                        frame:SetBackdropColor(classR, classG, classB, 0.9)
+                        frame.texture:SetVertexColor(classR, classG, classB, 0.9)
                         frame.playerNameText:SetText(frame.playerName)
                         DeadorGhostData[unit] = nil
                     end

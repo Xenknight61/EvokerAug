@@ -64,8 +64,11 @@ addon.DefaultProfile = {
 }
 
 addon.Config = {
-    ["version"] = "1.0.20",
+    ["version"] = "1.0.23",
     ["changelog"] = [=[
+v1.0.23
+    - Fixed the problem of the frame appearing only in gray due to some situations.
+
 v1.0.20
     - Changes have been made to the Party Members option to allow multiple selections.
     - Added Favorite Player option ( When the people added to the favorites enter the party, a frame will be added automatically. )
