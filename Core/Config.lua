@@ -20,8 +20,10 @@ addon.DefaultProfile = {
         backgroundTextTexture = "Interface\\Addons\\EvokerAug\\Media\\bar",
         backgroundTextTexture2 = "EvokerAug",
         headerunlock = false,
-        autoFrameFill = true,
-        sortByClass = false,
+        autoFrameFill = false,
+        showRaid = true,
+        showMythic = true,
+        sortByClass = true,
         sortType = "NAME",
         charSpell = {},
         prescienceBarEnable = true,
@@ -57,12 +59,18 @@ addon.DefaultProfile = {
             [361022] = "Sense Power",
         },
         omniCDSupport = false,
+        favoriPlayer = {},
     }
 }
 
 addon.Config = {
-    ["version"] = "1.0.18",
+    ["version"] = "1.0.20",
     ["changelog"] = [=[
+v1.0.20
+    - Changes have been made to the Party Members option to allow multiple selections.
+    - Added Favorite Player option ( When the people added to the favorites enter the party, a frame will be added automatically. )
+    - Added Show Raid and Mythic option
+
 v1.0.18
     - Sense Power added. If someone has a buff, a glow is added to the frame
     - If the player is dead, the frame will be greyed out and DEAD will be written next to the name

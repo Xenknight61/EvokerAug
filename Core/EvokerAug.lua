@@ -32,7 +32,7 @@ local miniButton = LibStub("LibDataBroker-1.1"):NewDataObject(addonName,
                 end
             elseif btn == "RightButton" then
                 if not combatLockdown then
-                    HideAllSubFrames()
+                    CheckShoworHide()
                 end
             end
         end,
@@ -57,14 +57,41 @@ AddonCompartmentFrame:RegisterAddon({
 })
 
 local function sortFramesByName(a, b)
-    return a.playerName < b.playerName
+    local favList = addon.db.profile.favoriPlayer
+    for i, v in ipairs(favList) do
+        local playerName = GetCharacterName(v)
+        if a.playerName == playerName then
+            return true
+        elseif b.playerName == playerName then
+            return false
+        end
+    end
+    return a.playerName  < b.playerName 
 end
 
 local function sortFramesByClass(a, b)
+    local favList = addon.db.profile.favoriPlayer
+    for i, v in ipairs(favList) do
+        local playerName = GetCharacterName(v)
+        if a.playerName == playerName then
+            return true
+        elseif b.playerName == playerName then
+            return false
+        end
+    end
     return a.class < b.class
 end
 
 local function sortFramesByRole(a, b)
+    local favList = addon.db.profile.favoriPlayer
+    for i, v in ipairs(favList) do
+        local playerName = GetCharacterName(v)
+        if a.playerName == playerName then
+            return true
+        elseif b.playerName == playerName then
+            return false
+        end
+    end
     return a.role < b.role
 end
 
@@ -84,18 +111,11 @@ local sortTypes = {
 
 -- Minimap Icon
 
-function HideAllSubFrames()
-    if selectedPlayerFrameContainer:IsShown() then
-        selectedPlayerFrameContainer:Hide()
+function CheckShoworHide()
+    if selectedPlayerFrameContainer and selectedPlayerFrameContainer:IsShown() then
+        HideAllSubFrames()
     else
-        selectedPlayerFrameContainer:Show()
-    end
-    for k, v in ipairs(selectedPlayerFrames) do
-        if v:IsShown() then
-            v:Hide()
-        else
-            v:Show()
-        end
+        EnableAllFrame()
     end
 end
 
@@ -117,9 +137,9 @@ function CreateProgressBar()
             progressBar:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
             progressBar:SetStatusBarColor(0, 1, 0)
 
-            local text = progressBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            text:SetPoint("CENTER", progressBar, "CENTER")
-            text:SetText("Ebon Might")
+            progressBar.text = progressBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            progressBar.text:SetPoint("CENTER", progressBar, "CENTER")
+            progressBar.text:SetText("Ebon Might")
         else
             progressBar:Show()
         end
@@ -147,7 +167,7 @@ function CreateProgressBar()
 end
 
 ---- Player Buffs Icon -----
-local function GetCharacterName(fullName)
+function GetCharacterName(fullName)
     if fullName then
         local characterName = string.match(fullName, "([^%-]+)")
         return characterName
@@ -351,6 +371,24 @@ local function UpdatePlayerFrame()
     end
 end
 
+local function SortType()
+    table.sort(selectedPlayerFrames, sortTypes[addon.db.profile.sortType])
+    local tankCount = 0
+    for i, frame in ipairs(selectedPlayerFrames) do
+        if frame.role == "TANK" then
+            tankCount = tankCount + 1
+            frame:ClearAllPoints()
+            local ebonMightCount = addon.db.profile.ebonmightProgressBarEnable and 20 or 0
+            frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0,
+                ebonMightCount + (tankCount * addon.db.profile.buttonHeight))
+        else
+            frame:ClearAllPoints()
+            frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0,
+                (i - tankCount) * -addon.db.profile.buttonHeight)
+        end
+    end
+end
+
 local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitIndex, unittt)
     if combatLockdown then
         return
@@ -405,20 +443,7 @@ local function CreateSelectedPlayerFrame(playerName, class, PlayerRole, unitInde
     selectedPlayerFrames[frameIndex].playerNameText:SetJustifyH("CENTER")
     selectedPlayerFrames[frameIndex].playerNameText:SetJustifyV("MIDDLE")
 
-    local tankCount = 0
-    for i, frame in ipairs(selectedPlayerFrames) do
-        if frame.role == "TANK" then
-            tankCount = tankCount + 1
-            frame:ClearAllPoints()
-            local ebonMightCount = addon.db.profile.ebonmightProgressBarEnable and 20 or 0
-            frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0,
-                ebonMightCount + (tankCount * addon.db.profile.buttonHeight))
-        else
-            frame:ClearAllPoints()
-            frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0,
-                (i - tankCount) * -addon.db.profile.buttonHeight)
-        end
-    end
+    SortType()
 
     if distanceTimer == nil then
         distanceTimer = C_Timer.NewTicker(1, UpdateDistance)
@@ -443,6 +468,15 @@ local function GetPlayerFrameIndexByName(name)
     return nil
 end
 
+local function IsPlayerFrameByName(name)
+    for i, frame in ipairs(selectedPlayerFrames) do
+        if frame.playerName == name then
+            return true
+        end
+    end
+    return false
+end
+
 local function DeleteSelectedPlayerFrame(playerName)
     local playerIndex = GetPlayerFrameIndexByName(playerName)
     if playerIndex and selectedPlayerFrames[playerIndex] then
@@ -451,19 +485,7 @@ local function DeleteSelectedPlayerFrame(playerName)
         selectedPlayerFrames[playerIndex]:SetParent(nil)
         table.remove(selectedPlayerFrames, playerIndex)
         checkboxStates[playerName] = false
-        table.sort(selectedPlayerFrames, sortFramesByName)
-        local tankCount = 0
-        for i, frame in ipairs(selectedPlayerFrames) do
-            if frame.role == "TANK" then
-                tankCount = tankCount + 1
-                local ebonMightCount = addon.db.profile.ebonmightProgressBarEnable and 20 or 0
-                frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0,
-                    ebonMightCount + (tankCount * addon.db.profile.buttonHeight))
-            else
-                frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0,
-                    (i - tankCount) * -addon.db.profile.buttonHeight)
-            end
-        end
+        SortType()
     end
 
     if #selectedPlayerFrames == 0 then
@@ -480,7 +502,7 @@ local function FrameAutoFill()
         addonNameText:SetText(addonName .. " (Waiting for combat to end)")
         return
     end
-    local partyMembers = GetHomePartyInfo()
+    local partyMembers = GetHomePartyInfos()
     if not IsInRaid() then
         for i, member in ipairs(partyMembers) do
             local memberInParty = false
@@ -506,7 +528,7 @@ local function FrameAutoFill()
 end
 
 local function GroupUpdate()
-    local partyMembers = GetHomePartyInfo()
+    local partyMembers = GetHomePartyInfos()
 
     for _, frame in ipairs(selectedPlayerFrames) do
         local playerName = frame.playerName
@@ -591,6 +613,7 @@ local function GetOptions()
     local profiles = LibStub('AceDBOptions-3.0'):GetOptionsTable(addon.db)
     profiles.order = 600
     profiles.disabled = false
+    local favList = addon.db.profile.favoriPlayer
     local orderNumber = 2
     EvokerAugOptions = {
         name = addonName,
@@ -688,19 +711,7 @@ local function GetOptions()
                         get = function() return addon.db.profile.sortType end,
                         set = function(info, value)
                             addon.db.profile.sortType = value
-                            local tank = 0
-                            table.sort(selectedPlayerFrames, sortTypes[value])
-                            for i, frame in ipairs(selectedPlayerFrames) do
-                                if frame.role == "TANK" then
-                                    tank = tank + 1
-                                    frame:SetPoint("TOP", selectedPlayerFrameContainer, "TOP", 0,
-                                        tank * addon.db.profile.buttonHeight)
-                                else
-                                    local dpsCheck = i - tank
-                                    frame:SetPoint("BOTTOM", selectedPlayerFrameContainer, "BOTTOM", 0,
-                                        dpsCheck * -addon.db.profile.buttonHeight)
-                                end
-                            end
+                            SortType()
                         end,
                     },
                     l8 = {
@@ -857,6 +868,30 @@ local function GetOptions()
                                 selectedPlayerFrameContainer:UnregisterEvent("PLAYER_ENTERING_WORLD")
                             end
                             addon.db.profile.autoFrameFill = value
+                        end,
+                    },
+                    raid = {
+                        order = 21,
+                        type = 'toggle',
+                        name = "Show Raid",
+                        desc = "Show Raid",
+                        get = function()
+                            return addon.db.profile.showRaid
+                        end,
+                        set = function(info, value)
+                            addon.db.profile.showRaid = value
+                        end,
+                    },
+                    mythic = {
+                        order = 21,
+                        type = 'toggle',
+                        name = "Show Mythic+",
+                        desc = "Show Mythic+",
+                        get = function()
+                            return addon.db.profile.showMythic
+                        end,
+                        set = function(info, value)
+                            addon.db.profile.showMythic = value
                         end,
                     },
                     h5 = {
@@ -1125,6 +1160,18 @@ local function GetOptions()
 
                 },
             },
+            favPlayerList = {
+                order = 3,
+                name = "Favorite Player List",
+                type = "group",
+                args = {
+                    h1 = {
+                        type = 'header',
+                        name = 'Favorite Player List',
+                        order = 1,
+                    },
+                },
+            },
             customSpells = {
                 order = 5,
                 name = "Spell",
@@ -1209,6 +1256,28 @@ local function GetOptions()
         orderNumber = orderNumber + 1
     end
 
+    orderNumber = 2
+    for k, v in pairs(favList) do
+        EvokerAugOptions.args.favPlayerList.args[v .. "" .. k] = {
+            order = orderNumber,
+            type = 'toggle',
+            name = v,
+            arg = k,
+            set = function(_, value)
+                if value then
+                    addon.db.profile.favoriPlayer[k] = v
+                else
+                    addon.db.profile.favoriPlayer[k] = nil
+                end
+            end,
+            get = function()
+                return addon.db.profile.favoriPlayer[k] ~= nil
+            end,
+        }
+
+        orderNumber = orderNumber + 1
+    end
+
     return EvokerAugOptions
 end
 
@@ -1247,11 +1316,6 @@ function addon:OnInitialize()
 end
 
 function addon:OnEnable() -- PLAYER_LOGIN
-    local class = select(2, UnitClass("player"))
-    if class ~= "EVOKER" then
-        return
-    end
-
     local lib = LibStub("LibSharedMedia-3.0")
     lib:Register(lib.MediaType.STATUSBAR, "EvokerAug", [[Interface\AddOns\EvokerAug\Media\bar]])
 
@@ -1301,6 +1365,36 @@ function addon:OnEnable() -- PLAYER_LOGIN
     selectedPlayerFrameContainer:SetScript("OnEvent", function(self, event, unit, info)
         if event == "GROUP_ROSTER_UPDATE" then
             GroupUpdate()
+            --- Favorite Check
+            local in_group = IsInGroup() or IsInRaid()
+            if in_group then
+                for i = 1, GetNumGroupMembers() do
+                    local unitID = (IsInRaid() and "raid" .. i) or (IsInGroup() and "party" .. i) or "player"
+                    local fullName, realm = UnitName(unitID)
+                    if fullName then
+                        local class = UnitClass(unitID)
+                        if not realm then
+                            realm = GetRealmName()
+                            fullName = fullName .. "-" .. realm
+                        end
+                        if fullName and class then
+                            local isFav = IsFavorite(fullName)
+                            if isFav then
+                                local combatRole = UnitGroupRolesAssigned(unitID)
+                                local name = GetCharacterName(fullName)
+                                if combatRole == "DAMAGER" then
+                                    combatRole = "DPS"
+                                end
+                                if name and class and combatRole and not IsPlayerFrameByName(name) then
+                                    class = strupper(string.gsub(class, "%s+", ""))
+                                    CreateSelectedPlayerFrame(name, class, combatRole, unitID, unitID)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+
         elseif event == "PLAYER_REGEN_DISABLED" then
             combatLockdown = true
         elseif event == "PLAYER_REGEN_ENABLED" then
@@ -1310,41 +1404,49 @@ function addon:OnEnable() -- PLAYER_LOGIN
                 isCombatButton = false
                 FrameAutoFill()
             end
-        elseif event == "PLAYER_ENTERING_WORLD" and addon.db.profile.autoFrameFill then
-            local _, instanceType = IsInInstance()
-            if instanceType == "party" then
-                C_Timer.After(4.5, function()
-                    local size = GetNumGroupMembers()
-                    if size > 0 then
-                        FrameAutoFill()
-                    end
-                end)
-            elseif instanceType == "none" then
-                C_Timer.After(4.5, function()
+        elseif event == "PLAYER_ENTERING_WORLD" then
+            if addon.db.profile.autoFrameFill then
+                local _, instanceType = IsInInstance()
+                if instanceType == "party" then
+                    C_Timer.After(4.5, function()
+                        local size = GetNumGroupMembers()
+                        if size > 0 then
+                            FrameAutoFill()
+                        end
+                    end)
+                elseif instanceType == "none" then
+                    C_Timer.After(4.5, function()
+                        for i, frame in pairs(checkboxStates) do
+                            DeleteSelectedPlayerFrame(i)
+                        end
+                    end)
+                end
+            end
+            if not addon.db.profile.showRaid then
+                local _, instanceType = IsInInstance()
+                if instanceType == "raid" then
                     for i, frame in pairs(checkboxStates) do
                         DeleteSelectedPlayerFrame(i)
                     end
-                end)
+                    HideAllSubFrames()
+                end
+            elseif not addon.db.profile.showMythic then
+                local _, instanceType = IsInInstance()
+                if instanceType == "party" then
+                    for i, frame in pairs(checkboxStates) do
+                        DeleteSelectedPlayerFrame(i)
+                    end
+                    HideAllSubFrames()
+                end
             end
         elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
             if unit == "player" then
                 local currentSpec = GetSpecialization()
                 if currentSpec then
                     if currentSpec ~= 3 then
-                        selectedPlayerFrameContainer:Hide()
-                        addonNameTexture:Hide()
-                        addonNameText:Hide()
-                        selectedPlayerFrameContainer:SetScript("OnUpdate", nil)
-                        if progressBar then
-                            progressBar:Hide()
-                        end
+                        HideAllSubFrames()
                     else
-                        selectedPlayerFrameContainer:Show()
-                        addonNameTexture:Show()
-                        addonNameText:Show()
-                        if addon.db.profile.ebonmightProgressBarEnable then
-                            CreateProgressBar()
-                        end
+                        EnableAllFrame()
                     end
                 end
             end
@@ -1426,20 +1528,24 @@ function addon:OnEnable() -- PLAYER_LOGIN
 
 
     -----------------------------
-    ---
-    local currentSpec = GetSpecialization()
-    if currentSpec then
-        if currentSpec ~= 3 then
-            selectedPlayerFrameContainer:Hide()
-            addonNameTexture:Hide()
-            addonNameText:Hide()
-            return
-        end
-    end
-
     if addon.db.profile.ebonmightProgressBarEnable then
         CreateProgressBar()
     end
+
+    local class = select(2, UnitClass("player"))
+    if class ~= "EVOKER" then
+        HideAllSubFrames()
+    else
+        local currentSpec = GetSpecialization()
+        if currentSpec then
+            if currentSpec ~= 3 then
+                HideAllSubFrames()
+            end
+        end
+
+        AddItemsWithMenu()
+    end
+
 end
 
 local function copytable(dst, src)
@@ -1479,7 +1585,7 @@ function addon:Reconfigure()
         self.db.profile.positions.yOffset)
 end
 
-function GetHomePartyInfo()
+function GetHomePartyInfos()
     local partyMembers = {}
     local in_group = IsInGroup() or IsInRaid()
     if in_group then
@@ -1503,6 +1609,9 @@ function GetHomePartyInfo()
         local name, class = UnitName("player"), UnitClass("player")
         local specializationIndex = GetSpecialization() or 0
         local _, _, _, _, combatRole, _ = GetSpecializationInfo(specializationIndex)
+        if combatRole == "DAMAGER" then
+            combatRole = "DPS"
+        end
         table.insert(partyMembers,
             { name = name, class = strupper(string.gsub(class, "%s+", "")), role = combatRole, unit = 1 })
     end
@@ -1513,7 +1622,7 @@ end
 function RightMenu(owner, MenuDesc)
     MenuDesc:SetTag("AUGEVOKER_RIGHT_MENU");
     local PartyList = {}
-    local partyMembers = GetHomePartyInfo()
+    local partyMembers = GetHomePartyInfos()
 
     for i, member in ipairs(partyMembers) do
         table.insert(PartyList, {
@@ -1539,7 +1648,7 @@ function RightMenu(owner, MenuDesc)
     MenuDesc:CreateTitle(addonName)
     local party = MenuDesc:CreateButton("Party members")
     for i, v in ipairs(PartyList) do
-        party:CreateRadio(v.text, v.checked, v.func, v.index)
+        party:CreateCheckbox(v.text, v.checked, v.func, v.index)
     end
     MenuDesc:CreateButton('Auto Fill (M+)', function() FrameAutoFill() end)
     MenuDesc:CreateButton('Clear Frame', function()
@@ -1574,3 +1683,83 @@ function addon:OpenOptions(...)
     end
 end
 
+function HideAllSubFrames()
+    for i, frame in pairs(selectedPlayerFrames) do
+        frame:Hide()
+    end
+    selectedPlayerFrameContainer:Hide()
+    addonNameText:Hide()
+    if progressBar then
+        progressBar:Hide()
+        progressBar.text:Hide()
+    end
+end
+
+function EnableAllFrame()
+    for i, frame in pairs(selectedPlayerFrames) do
+        frame:Show()
+    end
+    if selectedPlayerFrameContainer then
+        selectedPlayerFrameContainer:Show()
+    end
+    addonNameText:Show()
+    if progressBar then
+        progressBar:Show()
+        progressBar.text:Show()
+    end
+end
+
+function IsFavorite(name)
+    local favList = addon.db.profile.favoriPlayer
+    for i, v in ipairs(favList) do
+        if v == name then
+            return true
+        end
+    end
+    return false
+end
+
+function MenuHandler(owner, rootDescription, contextData)
+    local name = contextData.name
+    if not contextData.server then
+        name = name .. "-" .. GetRealmName()
+    else
+        name = name .. "-" .. contextData.server
+    end
+    rootDescription:CreateDivider();
+    rootDescription:CreateTitle("EvokerAug");
+    local text = IsFavorite(name) and "Remove from Favorite" or "Add to favorite"
+    rootDescription:CreateButton(text, function()
+        if not IsFavorite(name) then
+            table.insert(addon.db.profile.favoriPlayer, name)
+        else
+            for i, v in ipairs(addon.db.profile.favoriPlayer) do
+                if v == name then
+                    table.remove(addon.db.profile.favoriPlayer, i)
+                end
+            end
+        end
+    end)
+end
+
+function AddItemsWithMenu()
+    if not Menu or not Menu.ModifyMenu then return end
+
+    local menuTags = {
+        ["MENU_UNIT_PLAYER"] = true,
+        ["MENU_UNIT_ENEMY_PLAYER"] = true,
+        ["MENU_UNIT_PARTY"] = true,
+        ["MENU_UNIT_RAID_PLAYER"] = true,
+        ["MENU_UNIT_FRIEND"] = true,
+        ["MENU_UNIT_COMMUNITIES_GUILD_MEMBER"] = true,
+        ["MENU_UNIT_COMMUNITIES_MEMBER"] = true,
+        ["MENU_LFG_FRAME_SEARCH_ENTRY"] = true,
+        ["MENU_LFG_FRAME_MEMBER_APPLY"] = true,
+    }
+
+    for tag, enabled in pairs(menuTags) do
+        if enabled then
+            Menu.ModifyMenu(tag, MenuHandler)
+        end
+    end
+end
